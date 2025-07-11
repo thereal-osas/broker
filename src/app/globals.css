@@ -15,7 +15,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
-    --foreground: #ededed;
+    --foreground: #a5a4a4;
   }
 }
 
@@ -23,4 +23,33 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Enhanced placeholder styling for better visibility */
+input::placeholder,
+textarea::placeholder {
+  font-weight: 500 !important;
+  opacity: 0.8 !important;
+}
+
+/* Dark theme placeholders (auth pages) */
+.placeholder-gray-400::placeholder {
+  color: rgb(156 163 175) !important;
+  font-weight: 600 !important;
+  opacity: 0.9 !important;
+}
+
+/* Light theme placeholders (dashboard forms) */
+input[placeholder]:not([class*="placeholder-gray-400"])::placeholder,
+textarea[placeholder]:not([class*="placeholder-gray-400"])::placeholder {
+  color: rgb(104, 108, 116) !important;
+  font-weight: 500 !important;
+  opacity: 0.85 !important;
+}
+
+/* Specific enhancement for form inputs */
+.form-input::placeholder {
+  color: rgb(75 85 99) !important;
+  font-weight: 600 !important;
+  opacity: 0.9 !important;
 }
