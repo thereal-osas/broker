@@ -14,10 +14,6 @@ const ADDRESS_PATTERNS = {
   usdt: {
     pattern: /^0x[a-fA-F0-9]{40}$/,
     description: 'USDT address (ERC-20, same format as Ethereum)'
-  },
-  litecoin: {
-    pattern: /^(ltc1|[LM])[a-zA-HJ-NP-Z0-9]{25,87}$/,
-    description: 'Litecoin address (Bech32 or Legacy format)'
   }
 };
 
@@ -47,8 +43,7 @@ function validateAllAddresses() {
   const addresses = {
     bitcoin: process.env.NEXT_PUBLIC_CRYPTO_WALLET_BITCOIN,
     ethereum: process.env.NEXT_PUBLIC_CRYPTO_WALLET_ETHEREUM,
-    usdt: process.env.NEXT_PUBLIC_CRYPTO_WALLET_USDT,
-    litecoin: process.env.NEXT_PUBLIC_CRYPTO_WALLET_LITECOIN
+    usdt: process.env.NEXT_PUBLIC_CRYPTO_WALLET_USDT
   };
 
   let allValid = true;
@@ -79,7 +74,6 @@ function validateAllAddresses() {
     console.log('   Bitcoin:  bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh');
     console.log('   Ethereum: 0x742d35Cc6634C0532925a3b8D4C9db96590b5c8e');
     console.log('   USDT:     0x742d35Cc6634C0532925a3b8D4C9db96590b5c8e');
-    console.log('   Litecoin: ltc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4');
   }
 
   return allValid;
@@ -92,8 +86,7 @@ function performSecurityChecks() {
   const addresses = {
     bitcoin: process.env.NEXT_PUBLIC_CRYPTO_WALLET_BITCOIN,
     ethereum: process.env.NEXT_PUBLIC_CRYPTO_WALLET_ETHEREUM,
-    usdt: process.env.NEXT_PUBLIC_CRYPTO_WALLET_USDT,
-    litecoin: process.env.NEXT_PUBLIC_CRYPTO_WALLET_LITECOIN
+    usdt: process.env.NEXT_PUBLIC_CRYPTO_WALLET_USDT
   };
 
   // Check for duplicate addresses
@@ -103,7 +96,7 @@ function performSecurityChecks() {
   if (addressValues.length !== uniqueAddresses.size) {
     console.log('⚠️  Warning: Some addresses are duplicated');
     console.log('   This is OK for USDT/Ethereum (same network)');
-    console.log('   But Bitcoin and Litecoin should have unique addresses\n');
+    console.log('   But Bitcoin should have a unique address\n');
   } else {
     console.log('✅ All addresses are unique\n');
   }
@@ -111,9 +104,8 @@ function performSecurityChecks() {
   // Check for placeholder values
   const placeholders = [
     'your-bitcoin-address-here',
-    'your-ethereum-address-here', 
-    'your-usdt-address-here',
-    'your-litecoin-address-here'
+    'your-ethereum-address-here',
+    'your-usdt-address-here'
   ];
 
   let hasPlaceholders = false;

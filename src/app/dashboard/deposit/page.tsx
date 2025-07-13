@@ -27,16 +27,13 @@ interface DepositRequest {
 const CRYPTO_WALLETS = {
   bitcoin:
     process.env.NEXT_PUBLIC_CRYPTO_WALLET_BITCOIN ||
-    "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+    "12fRdYfNvvbAgoRM3bD8rByorieo5ZqD9P",
   ethereum:
     process.env.NEXT_PUBLIC_CRYPTO_WALLET_ETHEREUM ||
-    "0x742d35Cc6634C0532925a3b8D4C9db96590b5c8e",
+    "0xdaB7c9Cb68B0CafB4Bc330Ef2dD4628e7E8ED855",
   usdt:
     process.env.NEXT_PUBLIC_CRYPTO_WALLET_USDT ||
-    "0x742d35Cc6634C0532925a3b8D4C9db96590b5c8e",
-  litecoin:
-    process.env.NEXT_PUBLIC_CRYPTO_WALLET_LITECOIN ||
-    "ltc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
+    "0xdaB7c9Cb68B0CafB4Bc330Ef2dD4628e7E8ED855",
 };
 
 export default function DepositPage() {
@@ -74,7 +71,6 @@ export default function DepositPage() {
     { value: "bitcoin", label: "Bitcoin (BTC)", icon: "₿" },
     { value: "ethereum", label: "Ethereum (ETH)", icon: "Ξ" },
     { value: "usdt", label: "Tether (USDT)", icon: "₮" },
-    { value: "litecoin", label: "Litecoin (LTC)", icon: "Ł" },
   ];
 
   useEffect(() => {
