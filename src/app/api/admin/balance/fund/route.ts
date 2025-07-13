@@ -45,7 +45,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Use transaction to ensure data consistency
-    const result = await db.transaction(async (client) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const result = await db.transaction(async (_client) => {
       // Update user balance
       const updatedBalance = await balanceQueries.updateBalance(
         userId,
@@ -126,7 +127,8 @@ export async function PUT(request: NextRequest) {
     }
 
     // Use transaction to ensure data consistency
-    const result = await db.transaction(async (client) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const result = await db.transaction(async (_client) => {
       // Update user balance
       const updatedBalance = await balanceQueries.updateBalance(
         userId,

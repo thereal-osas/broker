@@ -37,9 +37,6 @@ export default function AdminWithdrawalsPage() {
   const [requests, setRequests] = useState<WithdrawalRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
-  const [selectedRequest, setSelectedRequest] =
-    useState<WithdrawalRequest | null>(null);
-  const [adminNotes, setAdminNotes] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const toast = useToast();
 
@@ -88,14 +85,12 @@ export default function AdminWithdrawalsPage() {
 
       if (response.ok) {
         fetchWithdrawalRequests();
-        setSelectedRequest(null);
-        setAdminNotes("");
         toast.success(`Withdrawal request ${newStatus} successfully!`);
       } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to update withdrawal request");
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to update withdrawal request");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred while updating the request");
     } finally {
       setIsProcessing(false);
@@ -303,12 +298,7 @@ export default function AdminWithdrawalsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => setSelectedRequest(request)}
-                        className="text-blue-600 hover:text-blue-900 mr-4"
-                      >
-                        View Details
-                      </button>
+
                       {request.status === "pending" && (
                         <div className="flex space-x-2">
                           <button

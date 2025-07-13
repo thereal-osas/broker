@@ -72,10 +72,10 @@ export default function BalanceManager({
         setDescription("");
         onBalanceUpdate();
       } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to update balance");
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to update balance");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred while updating balance");
     } finally {
       setIsLoading(false);

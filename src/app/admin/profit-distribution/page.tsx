@@ -88,7 +88,7 @@ export default function ProfitDistributionPage() {
         const error = await response.json();
         toast.error(error.error || 'Failed to run profit distribution');
       }
-    } catch (error) {
+    } catch {
       toast.error('An error occurred while running profit distribution');
     } finally {
       setIsDistributing(false);

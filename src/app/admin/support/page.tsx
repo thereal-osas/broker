@@ -118,7 +118,7 @@ export default function AdminSupportPage() {
         }
         toast.success(`Ticket status updated to ${newStatus}`);
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred while updating the ticket status");
     }
   };
@@ -147,7 +147,7 @@ export default function AdminSupportPage() {
         fetchTickets(); // Refresh to update response count
         toast.success("Response sent successfully!");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred while sending the response");
     }
   };

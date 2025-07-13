@@ -83,7 +83,7 @@ export default function AdminSettingsPage() {
         const error = await response.json();
         alert(error.error || 'Failed to update settings');
       }
-    } catch (error) {
+    } catch {
       alert('An error occurred while updating settings');
     } finally {
       setIsSaving(false);

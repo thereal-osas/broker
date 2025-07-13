@@ -101,10 +101,10 @@ export default function ProfilePage() {
         setIsEditing(false);
         toast.success("Profile updated successfully!");
       } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to update profile");
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to update profile");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred while updating profile");
     } finally {
       setIsSaving(false);
@@ -144,10 +144,10 @@ export default function ProfilePage() {
         setShowPasswordForm(false);
         toast.success("Password changed successfully!");
       } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to change password");
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to change password");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred while changing password");
     } finally {
       setIsSaving(false);

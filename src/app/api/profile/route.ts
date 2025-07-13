@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../lib/auth";
 import { db } from "../../../../lib/db";
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
@@ -26,6 +26,7 @@ export async function GET(_request: NextRequest) {
 
     const user = result.rows[0];
     // Remove password from response
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...userProfile } = user;
 
     return NextResponse.json(userProfile);
@@ -83,6 +84,7 @@ export async function PUT(request: NextRequest) {
 
     const user = result.rows[0];
     // Remove password from response
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...userProfile } = user;
 
     return NextResponse.json(userProfile);

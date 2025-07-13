@@ -11,9 +11,6 @@ import {
   DollarSign,
   Users,
   ArrowRight,
-  CheckCircle,
-  Star,
-  BarChart3,
 } from "lucide-react";
 
 export default function Home() {

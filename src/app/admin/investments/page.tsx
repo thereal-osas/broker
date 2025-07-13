@@ -5,14 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  TrendingUp,
-  Plus,
-  Edit,
   Trash2,
-  DollarSign,
-  Calendar,
-  Users,
-  BarChart3,
 } from "lucide-react";
 import { useToast } from "../../../hooks/useToast";
 
@@ -35,18 +28,7 @@ export default function AdminInvestmentsPage() {
   const router = useRouter();
   const [plans, setPlans] = useState<InvestmentPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
   const toast = useToast();
-  const [editingPlan, setEditingPlan] = useState<InvestmentPlan | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    min_amount: "",
-    max_amount: "",
-    daily_profit_rate: "",
-    duration_days: "",
-    is_active: true,
-  });
 
   useEffect(() => {
     if (status === "loading") return;
@@ -73,80 +55,9 @@ export default function AdminInvestmentsPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
 
-    try {
-      const url = editingPlan
-        ? `/api/admin/investment-plans/${editingPlan.id}`
-        : "/api/admin/investment-plans";
 
-      const method = editingPlan ? "PUT" : "POST";
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...formData,
-          min_amount: parseFloat(formData.min_amount),
-          max_amount: formData.max_amount
-            ? parseFloat(formData.max_amount)
-            : null,
-          daily_profit_rate: parseFloat(formData.daily_profit_rate) / 100, // Convert percentage to decimal
-          duration_days: parseInt(formData.duration_days),
-        }),
-      });
-
-      if (response.ok) {
-        fetchInvestmentPlans();
-        resetForm();
-        toast.success(
-          editingPlan
-            ? "Plan updated successfully!"
-            : "Plan created successfully!"
-        );
-      } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to save plan");
-      }
-    } catch (error) {
-      toast.error("An error occurred while saving the plan");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleEdit = (plan: InvestmentPlan) => {
-    setEditingPlan(plan);
-    setFormData({
-      name: plan.name,
-      description: plan.description,
-      min_amount: (typeof plan.min_amount === "number"
-        ? plan.min_amount
-        : parseFloat(plan.min_amount || "0")
-      ).toString(),
-      max_amount: plan.max_amount
-        ? (typeof plan.max_amount === "number"
-            ? plan.max_amount
-            : parseFloat(plan.max_amount || "0")
-          ).toString()
-        : "",
-      daily_profit_rate: (
-        (typeof plan.daily_profit_rate === "number"
-          ? plan.daily_profit_rate
-          : parseFloat(plan.daily_profit_rate || "0")) * 100
-      ).toString(), // Convert to percentage
-      duration_days: (typeof plan.duration_days === "number"
-        ? plan.duration_days
-        : parseInt(plan.duration_days || "0")
-      ).toString(),
-      is_active: plan.is_active,
-    });
-    setShowForm(true);
-  };
 
   const handleDelete = async (planId: string) => {
     if (!confirm("Are you sure you want to delete this investment plan?"))
@@ -161,10 +72,10 @@ export default function AdminInvestmentsPage() {
         fetchInvestmentPlans();
         toast.success("Plan deleted successfully!");
       } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to delete plan");
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to delete plan");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred while deleting the plan");
     }
   };
@@ -187,37 +98,12 @@ export default function AdminInvestmentsPage() {
           `Plan ${!currentStatus ? "activated" : "deactivated"} successfully!`
         );
       }
-    } catch (error) {
+    } catch {
       alert("An error occurred while updating the plan status");
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      description: "",
-      min_amount: "",
-      max_amount: "",
-      daily_profit_rate: "",
-      duration_days: "",
-      is_active: true,
-    });
-    setEditingPlan(null);
-    setShowForm(false);
-  };
 
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) => {
-    const { name, value, type } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]:
-        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
-    }));
-  };
 
   if (status === "loading" || isLoading) {
     return (
@@ -241,13 +127,7 @@ export default function AdminInvestmentsPage() {
                 Manage investment plans and monitor performance
               </p>
             </div>
-            <button
-              onClick={() => setShowForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add New Plan
-            </button>
+
           </div>
         </div>
       </div>
@@ -277,12 +157,6 @@ export default function AdminInvestmentsPage() {
                     {plan.name}
                   </h3>
                   <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleEdit(plan)}
-                      className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
                     <button
                       onClick={() => handleDelete(plan.id)}
                       className="p-1 text-red-600 hover:bg-red-50 rounded"

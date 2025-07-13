@@ -4,8 +4,6 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Search,
-  Eye,
-  Edit,
   DollarSign,
   UserCheck,
   UserX,

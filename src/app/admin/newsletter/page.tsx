@@ -101,7 +101,7 @@ export default function AdminNewsletterPage() {
         const error = await response.json();
         toast.error(error.error || "Failed to save newsletter");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred while saving the newsletter");
     } finally {
       setIsLoading(false);
@@ -130,10 +130,10 @@ export default function AdminNewsletterPage() {
         fetchNewsletters();
         alert("Newsletter deleted successfully!");
       } else {
-        const error = await response.json();
-        alert(error.error || "Failed to delete newsletter");
+        const errorData = await response.json();
+        alert(errorData.error || "Failed to delete newsletter");
       }
-    } catch (error) {
+    } catch {
       alert("An error occurred while deleting the newsletter");
     }
   };
@@ -161,7 +161,7 @@ export default function AdminNewsletterPage() {
           } successfully!`
         );
       }
-    } catch (error) {
+    } catch {
       alert("An error occurred while updating the newsletter status");
     }
   };

@@ -8,7 +8,7 @@ import {
   db,
 } from "../../../../../lib/db";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
@@ -93,7 +93,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create investment and update balances in a transaction
-    const result = await db.transaction(async (client) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const result = await db.transaction(async (_client) => {
       // Create investment
       const investment = await investmentQueries.createInvestment({
         userId: session.user.id,

@@ -12,7 +12,6 @@ import { useToast } from "../../../hooks/useToast";
 import {
   TrendingUp,
   DollarSign,
-  Calendar,
   Target,
   PlusCircle,
   BarChart3,
@@ -65,10 +64,10 @@ export default function InvestmentsPage() {
         // Refresh balance as well
         window.location.reload();
       } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to create investment");
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to create investment");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred while creating the investment");
     }
   };

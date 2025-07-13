@@ -16,7 +16,7 @@ export default function UserDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const { balance, isLoading: balanceLoading, refreshBalance } = useBalance();
-  const { createInvestment, isLoading: investmentLoading } = useInvestments();
+  const { createInvestment } = useInvestments();
   const toast = useToast();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 

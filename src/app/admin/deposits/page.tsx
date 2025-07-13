@@ -6,12 +6,9 @@ import {
   CheckCircle,
   XCircle,
   Eye,
-  Clock,
   ExternalLink,
-  Copy,
-  Wallet,
 } from "lucide-react";
-import { useToast } from "../../../hooks/useToast";
+
 
 interface DepositRequest {
   id: string;
@@ -35,7 +32,7 @@ export default function AdminDeposits() {
   );
   const [adminNotes, setAdminNotes] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
-  const toast = useToast();
+
 
   useEffect(() => {
     fetchDeposits();
@@ -83,7 +80,7 @@ export default function AdminDeposits() {
         alert(error.error || `Failed to ${action} deposit`);
       }
     } catch (error) {
-      alert(`An error occurred while ${action}ing the deposit`);
+      alert(`An error occurred while ${action}ing the deposit: ${error}`);
     } finally {
       setActionLoading(false);
     }

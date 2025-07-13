@@ -44,16 +44,13 @@ export default function DepositPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [depositRequests, setDepositRequests] = useState<DepositRequest[]>([]);
   const [showForm, setShowForm] = useState(true);
-  const [copied, setCopied] = useState(false);
   const toast = useToast();
 
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(true);
       toast.success("Address copied to clipboard!");
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
+    } catch {
       // Fallback for older browsers
       const textArea = document.createElement("textarea");
       textArea.value = text;
@@ -61,9 +58,7 @@ export default function DepositPage() {
       textArea.select();
       document.execCommand("copy");
       document.body.removeChild(textArea);
-      setCopied(true);
       toast.success("Address copied to clipboard!");
-      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -114,10 +109,10 @@ export default function DepositPage() {
         fetchDepositRequests();
         toast.success("Deposit request submitted successfully!");
       } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to submit deposit request");
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to submit deposit request");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred while submitting the request");
     } finally {
       setIsLoading(false);

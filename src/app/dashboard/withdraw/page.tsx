@@ -84,10 +84,10 @@ export default function WithdrawPage() {
         fetchWithdrawalRequests();
         toast.success("Withdrawal request submitted successfully!");
       } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to submit withdrawal request");
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to submit withdrawal request");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred while submitting the request");
     } finally {
       setIsLoading(false);

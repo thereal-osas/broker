@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Allow GET requests for health checks
-export async function GET(_request: NextRequest) {
+export async function GET() {
   return NextResponse.json({
     status: "healthy",
     service: "daily-profits-cron",
