@@ -86,6 +86,23 @@ async function runAutomatedMigration() {
       console.error('   - Check if your database service is running');
       console.error('   - Verify the DATABASE_URL is correct');
       console.error('   - Ensure firewall allows connections');
+
+      // Special handling for Railway internal URLs
+      if (error.message.includes('.railway.internal')) {
+        console.error('');
+        console.error('🚨 RAILWAY USERS: You are using an internal Railway URL!');
+        console.error('   Internal URLs (*.railway.internal) only work within Railway network.');
+        console.error('   For external services like Vercel, you need the PUBLIC Railway URL.');
+        console.error('');
+        console.error('📋 To fix this:');
+        console.error('   1. Go to Railway dashboard → PostgreSQL service → Variables');
+        console.error('   2. Look for PGHOST with format: containers-us-west-xxx.railway.app');
+        console.error('   3. Use that hostname in your DATABASE_URL');
+        console.error('   4. Update DATABASE_URL in Vercel environment variables');
+        console.error('');
+        console.error('   Example correct URL:');
+        console.error('   postgresql://postgres:password@containers-us-west-123.railway.app:5432/railway');
+      }
     } else if (error.message.includes('authentication') || error.message.includes('password')) {
       console.error('🔧 Authentication issue:');
       console.error('   - Verify database credentials in DATABASE_URL');

@@ -21,6 +21,7 @@
     "db:setup-railway": "node scripts/get-railway-url.js",
     "db:auto-migrate": "node scripts/auto-migrate.js",
     "db:test-migration": "node scripts/test-auto-migration.js",
+    "db:check-railway": "node scripts/check-railway-url.js",
     "deploy:hotfix": "git checkout main && git push origin main",
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
