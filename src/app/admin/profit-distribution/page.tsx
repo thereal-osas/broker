@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -41,23 +41,7 @@ export default function ProfitDistributionPage() {
   const [isDistributing, setIsDistributing] = useState(false);
   const [lastDistribution, setLastDistribution] = useState<DistributionResult | null>(null);
 
-  useEffect(() => {
-    if (status === 'loading') return;
-    
-    if (!session?.user) {
-      router.push('/auth/signin');
-      return;
-    }
-
-    if (session.user.role !== 'admin') {
-      router.push('/dashboard');
-      return;
-    }
-
-    fetchActiveInvestments();
-  }, [session, status, router]);
-
-  const fetchActiveInvestments = async () => {
+  const fetchActiveInvestments = useCallback(async () => {
     try {
       const response = await fetch('/api/admin/profit-distribution');
       if (response.ok) {
@@ -70,7 +54,23 @@ export default function ProfitDistributionPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if (status === 'loading') return;
+
+    if (!session?.user) {
+      router.push('/auth/signin');
+      return;
+    }
+
+    if (session.user.role !== 'admin') {
+      router.push('/dashboard');
+      return;
+    }
+
+    fetchActiveInvestments();
+  }, [session, status, router, fetchActiveInvestments]);
 
   const runProfitDistribution = async () => {
     setIsDistributing(true);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 
 interface Balance {
@@ -21,7 +21,7 @@ export function useBalance() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchBalance = async () => {
+  const fetchBalance = useCallback(async () => {
     if (!session?.user) {
       setIsLoading(false);
       return;
@@ -30,13 +30,13 @@ export function useBalance() {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const response = await fetch('/api/balance');
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch balance');
       }
-      
+
       const data = await response.json();
       setBalance(data);
     } catch (err) {
@@ -44,15 +44,15 @@ export function useBalance() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [session]);
 
-  const refreshBalance = () => {
+  const refreshBalance = useCallback(() => {
     fetchBalance();
-  };
+  }, [fetchBalance]);
 
   useEffect(() => {
     fetchBalance();
-  }, [session]);
+  }, [fetchBalance]);
 
   return {
     balance,

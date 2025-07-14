@@ -5,8 +5,9 @@ import { db } from "../../../../../../../lib/db";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params;
   try {
     const session = await getServerSession(authOptions);
 
@@ -43,8 +44,9 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params;
   try {
     const session = await getServerSession(authOptions);
 

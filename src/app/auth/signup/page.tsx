@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
-export default function SignUp() {
+// Force dynamic rendering to prevent prerendering issues with useSearchParams
+export const dynamic = 'force-dynamic';
+
+function SignUpForm() {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -313,5 +316,13 @@ export default function SignUp() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function SignUp() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SignUpForm />
+    </Suspense>
   );
 }
