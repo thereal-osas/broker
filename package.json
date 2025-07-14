@@ -21,7 +21,9 @@
     "deploy:hotfix": "git checkout main && git push origin main",
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
-    "prepare": "npm run validate"
+    "prepare": "npm run validate",
+    "railway:migrate": "node scripts/migrate-production.js",
+    "railway:setup": "npm install && node scripts/migrate-production.js"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",
