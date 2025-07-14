@@ -57,12 +57,15 @@ export class ProfitDistributionService {
     `;
 
     const result = await db.query(query);
-    return result.rows.map((row: any) => ({
-      ...row,
-      amount: parseFloat(row.amount),
-      daily_profit_rate: parseFloat(row.daily_profit_rate),
-      duration_days: parseInt(row.duration_days),
-      days_completed: parseInt(row.days_completed),
+    return result.rows.map((row: Record<string, unknown>) => ({
+      id: String(row.id),
+      user_id: String(row.user_id),
+      plan_id: String(row.plan_id),
+      created_at: String(row.created_at),
+      amount: parseFloat(String(row.amount)),
+      daily_profit_rate: parseFloat(String(row.daily_profit_rate)),
+      duration_days: parseInt(String(row.duration_days)),
+      days_completed: parseInt(String(row.days_completed)),
     }));
   }
 
@@ -256,10 +259,12 @@ export class ProfitDistributionService {
     `;
 
     const result = await db.query(query, [userId, limit]);
-    return result.rows.map((row: any) => ({
-      ...row,
-      amount: parseFloat(row.amount),
-      profit_amount: parseFloat(row.profit_amount),
+    return result.rows.map((row: Record<string, unknown>) => ({
+      investment_id: String(row.investment_id),
+      user_id: String(row.user_id),
+      distribution_date: String(row.distribution_date),
+      amount: parseFloat(String(row.amount)),
+      profit_amount: parseFloat(String(row.profit_amount)),
     }));
   }
 

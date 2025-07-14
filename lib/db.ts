@@ -1,4 +1,4 @@
-import { Pool, PoolClient } from "pg";
+import { Pool, PoolClient, QueryResult } from "pg";
 
 // Database configuration
 const dbConfig = {
@@ -43,8 +43,8 @@ export class Database {
   }
 
   // Execute a query with retry logic
-  async query(text: string, params?: any[], retries: number = 3): Promise<any> {
-    let lastError: any;
+  async query(text: string, params?: unknown[], retries: number = 3): Promise<QueryResult> {
+    let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
@@ -55,21 +55,22 @@ export class Database {
         } finally {
           client.release();
         }
-      } catch (error: any) {
-        lastError = error;
+      } catch (error: unknown) {
+        const errorObj = error instanceof Error ? error : new Error(String(error));
+        lastError = errorObj;
         console.error(
           `Database query error (attempt ${attempt}/${retries}):`,
-          error.message
+          errorObj.message
         );
 
         // Don't retry for certain types of errors
         if (
-          error.code === "23505" ||
-          error.code === "23503" ||
-          error.code === "42P01"
+          (errorObj as { code?: string }).code === "23505" ||
+          (errorObj as { code?: string }).code === "23503" ||
+          (errorObj as { code?: string }).code === "42P01"
         ) {
           // Unique violation, foreign key violation, or table doesn't exist
-          throw error;
+          throw errorObj;
         }
 
         // Wait before retrying (exponential backoff)
@@ -81,13 +82,13 @@ export class Database {
       }
     }
 
-    throw lastError;
+    throw lastError || new Error('Database query failed');
   }
 
   // Execute a transaction
-  async transaction(
-    callback: (client: PoolClient) => Promise<any>
-  ): Promise<any> {
+  async transaction<T>(
+    callback: (client: PoolClient) => Promise<T>
+  ): Promise<T> {
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");
@@ -173,7 +174,7 @@ export const userQueries = {
   },
 
   // Update user
-  async updateUser(id: string, updates: any) {
+  async updateUser(id: string, updates: Record<string, unknown>) {
     const setClause = Object.keys(updates)
       .map((key, index) => `${key} = $${index + 2}`)
       .join(", ");
@@ -230,12 +231,12 @@ export const investmentQueries = {
     const query =
       "SELECT * FROM investment_plans WHERE is_active = true ORDER BY min_amount ASC";
     const result = await db.query(query);
-    return result.rows.map((plan: any) => ({
+    return result.rows.map((plan: Record<string, unknown>) => ({
       ...plan,
-      min_amount: parseFloat(plan.min_amount || 0),
-      max_amount: plan.max_amount ? parseFloat(plan.max_amount) : null,
-      daily_profit_rate: parseFloat(plan.daily_profit_rate || 0),
-      duration_days: parseInt(plan.duration_days || 0),
+      min_amount: parseFloat(String(plan.min_amount || 0)),
+      max_amount: plan.max_amount ? parseFloat(String(plan.max_amount)) : null,
+      daily_profit_rate: parseFloat(String(plan.daily_profit_rate || 0)),
+      duration_days: parseInt(String(plan.duration_days || 0)),
     }));
   },
 
@@ -269,12 +270,12 @@ export const investmentQueries = {
       ORDER BY ui.created_at DESC
     `;
     const result = await db.query(query, [userId]);
-    return result.rows.map((investment: any) => ({
+    return result.rows.map((investment: Record<string, unknown>) => ({
       ...investment,
-      amount: parseFloat(investment.amount || 0),
-      total_profit: parseFloat(investment.total_profit || 0),
-      daily_profit_rate: parseFloat(investment.daily_profit_rate || 0),
-      duration_days: parseInt(investment.duration_days || 0),
+      amount: parseFloat(String(investment.amount || 0)),
+      total_profit: parseFloat(String(investment.total_profit || 0)),
+      daily_profit_rate: parseFloat(String(investment.daily_profit_rate || 0)),
+      duration_days: parseInt(String(investment.duration_days || 0)),
     }));
   },
 };
@@ -318,9 +319,9 @@ export const transactionQueries = {
       LIMIT $2
     `;
     const result = await db.query(query, [userId, limit]);
-    return result.rows.map((transaction: any) => ({
+    return result.rows.map((transaction: Record<string, unknown>) => ({
       ...transaction,
-      amount: parseFloat(transaction.amount || 0),
+      amount: parseFloat(String(transaction.amount || 0)),
     }));
   },
 };

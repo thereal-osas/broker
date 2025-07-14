@@ -120,7 +120,7 @@ export const isInvestor = (userRole: string): boolean => {
 
 // Middleware for protecting routes
 export const requireAuth = (requiredRole?: string) => {
-  return (req: any, res: any, next: any) => {
+  return (req: { session?: { user?: { role: string } } }, res: { status: (code: number) => { json: (data: unknown) => unknown } }, next: () => void) => {
     const session = req.session;
     
     if (!session?.user) {

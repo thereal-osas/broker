@@ -26,9 +26,9 @@ export async function GET() {
 
     const result = await db.query(query);
 
-    const withdrawals = result.rows.map((withdrawal: any) => ({
+    const withdrawals = result.rows.map((withdrawal: Record<string, unknown>) => ({
       ...withdrawal,
-      amount: parseFloat(withdrawal.amount),
+      amount: parseFloat(String(withdrawal.amount)),
       account_details: typeof withdrawal.account_details === 'string' 
         ? JSON.parse(withdrawal.account_details) 
         : withdrawal.account_details,

@@ -21,9 +21,9 @@ export async function GET() {
     `;
 
     const result = await db.query(query, [session.user.id]);
-    const deposits = result.rows.map((deposit: any) => ({
+    const deposits = result.rows.map((deposit: Record<string, unknown>) => ({
       ...deposit,
-      amount: parseFloat(deposit.amount || 0),
+      amount: parseFloat(String(deposit.amount || 0)),
     }));
     return NextResponse.json(deposits);
   } catch (error) {

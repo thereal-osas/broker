@@ -27,14 +27,14 @@ export async function GET() {
 
     const result = await db.query(query);
 
-    const plans = result.rows.map((plan: any) => ({
+    const plans = result.rows.map((plan: Record<string, unknown>) => ({
       ...plan,
-      min_amount: parseFloat(plan.min_amount || 0),
-      max_amount: plan.max_amount ? parseFloat(plan.max_amount) : null,
-      daily_profit_rate: parseFloat(plan.daily_profit_rate || 0),
-      duration_days: parseInt(plan.duration_days || 0),
-      active_investments: parseInt(plan.active_investments || 0),
-      total_invested: parseFloat(plan.total_invested || 0),
+      min_amount: parseFloat(String(plan.min_amount || 0)),
+      max_amount: plan.max_amount ? parseFloat(String(plan.max_amount)) : null,
+      daily_profit_rate: parseFloat(String(plan.daily_profit_rate || 0)),
+      duration_days: parseInt(String(plan.duration_days || 0)),
+      active_investments: parseInt(String(plan.active_investments || 0)),
+      total_invested: parseFloat(String(plan.total_invested || 0)),
     }));
 
     return NextResponse.json(plans);

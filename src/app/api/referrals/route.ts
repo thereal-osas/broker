@@ -58,10 +58,10 @@ export async function GET() {
     `;
     const referralsResult = await db.query(referralsQuery, [session.user.id]);
 
-    const referrals = referralsResult.rows.map((referral: any) => ({
+    const referrals = referralsResult.rows.map((referral: Record<string, unknown>) => ({
       ...referral,
-      total_invested: parseFloat(referral.total_invested || 0),
-      commission_earned: parseFloat(referral.commission_earned || 0),
+      total_invested: parseFloat(String(referral.total_invested || 0)),
+      commission_earned: parseFloat(String(referral.commission_earned || 0)),
     }));
 
     const response = {

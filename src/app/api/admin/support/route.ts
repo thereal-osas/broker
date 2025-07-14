@@ -29,9 +29,9 @@ export async function GET() {
 
     const result = await db.query(query);
 
-    const tickets = result.rows.map((ticket: any) => ({
+    const tickets = result.rows.map((ticket: Record<string, unknown>) => ({
       ...ticket,
-      responses_count: parseInt(ticket.responses_count || 0),
+      responses_count: parseInt(String(ticket.responses_count || 0)),
     }));
 
     return NextResponse.json(tickets);

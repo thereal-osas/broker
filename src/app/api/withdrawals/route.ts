@@ -21,9 +21,9 @@ export async function GET() {
     `;
 
     const result = await db.query(query, [session.user.id]);
-    const withdrawals = result.rows.map((withdrawal: any) => ({
+    const withdrawals = result.rows.map((withdrawal: Record<string, unknown>) => ({
       ...withdrawal,
-      amount: parseFloat(withdrawal.amount || 0),
+      amount: parseFloat(String(withdrawal.amount || 0)),
     }));
     return NextResponse.json(withdrawals);
   } catch (error) {

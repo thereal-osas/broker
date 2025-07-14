@@ -16,7 +16,7 @@ interface WithdrawalRequest {
   id: string;
   amount: number;
   withdrawal_method: string;
-  account_details: any;
+  account_details: Record<string, unknown>;
   status: string;
   admin_notes: string;
   created_at: string;

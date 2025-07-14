@@ -113,7 +113,7 @@ export default function AdminSupportPage() {
         fetchTickets();
         if (selectedTicket?.id === ticketId) {
           setSelectedTicket((prev) =>
-            prev ? { ...prev, status: newStatus as any } : null
+            prev ? { ...prev, status: newStatus as SupportTicket["status"] } : null
           );
         }
         toast.success(`Ticket status updated to ${newStatus}`);
