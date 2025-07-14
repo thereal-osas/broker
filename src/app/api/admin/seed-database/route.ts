@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
     console.log('🌱 Database seeding requested via API');
     
     // Import and run seeding
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { runSeeding } = require('../../../../../scripts/seed-database');
     await runSeeding();
     
@@ -68,6 +69,7 @@ export async function GET() {
     }
 
     // Check if database has been seeded
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { Pool } = require('pg');
     const pool = new Pool({
       connectionString: process.env.DATABASE_URL,
