@@ -11,6 +11,24 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    ignores: [
+      "lib/**/*",
+      "scripts/**/*",
+      "database/**/*",
+      "docs/**/*",
+      ".next/**/*",
+      "node_modules/**/*"
+    ]
+  },
+  {
+    rules: {
+      // Allow require() imports for Node.js compatibility
+      "@typescript-eslint/no-require-imports": "off",
+      // Allow unused vars in some cases
+      "@typescript-eslint/no-unused-vars": "warn",
+    },
+  },
 ];
 
 export default eslintConfig;

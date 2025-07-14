@@ -20,7 +20,6 @@ export async function GET() {
     }
 
     // Simple health check without migration system
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { Pool } = require('pg');
     const pool = new Pool({
       connectionString: process.env.DATABASE_URL,
@@ -98,7 +97,6 @@ export async function POST(request: Request) {
     }
 
     // Import and run seeding
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { runSeeding } = require('../../../../../scripts/seed-database');
 
     console.log('🌱 Manual seeding triggered via API');
