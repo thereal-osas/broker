@@ -141,13 +141,7 @@ export default function SignIn() {
           </p>
         </div>
 
-        <div className="mt-8 pt-6 border-t border-white/20">
-          <div className="text-center text-sm text-gray-400">
-            <p>Demo Accounts:</p>
-            <p className="mt-1">Admin: admin@broker.com / admin123</p>
-            <p>Investor: demo@investor.com / demo123</p>
-          </div>
-        </div>
+      
       </motion.div>
     </div>
   );
