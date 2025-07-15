@@ -2,10 +2,13 @@
 
 /**
  * Railway Connection Tester
- * 
+ *
  * This script specifically tests Railway database connections
  * and helps identify the correct URL format for Vercel deployment.
  */
+
+// Load environment variables
+require('dotenv').config();
 
 const { Pool } = require('pg');
 

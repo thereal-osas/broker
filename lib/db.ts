@@ -1,21 +1,30 @@
 import { Pool, PoolClient, QueryResult } from "pg";
 
-// Database configuration
-const dbConfig = {
-  user: process.env.DB_USER || "postgres",
-  host: process.env.DB_HOST || "localhost",
-  database: process.env.DB_NAME || "broker_platform",
-  password: process.env.DB_PASSWORD || "YOUR_ACTUAL_PASSWORD_HERE",
-  // Uncomment the line below if using Windows authentication
-  // ssl: false,
-  port: parseInt(process.env.DB_PORT || "5432"),
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 10000, // Return an error after 10 seconds if connection could not be established
-  acquireTimeoutMillis: 10000, // Return an error after 10 seconds if a client cannot be acquired
-  statement_timeout: 30000, // Cancel any statement that takes more than 30 seconds
-  query_timeout: 30000, // Cancel any query that takes more than 30 seconds
-};
+// Database configuration - use DATABASE_URL for production (Railway/Vercel)
+const dbConfig = process.env.DATABASE_URL
+  ? {
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      max: 20, // Maximum number of clients in the pool
+      idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+      connectionTimeoutMillis: 10000, // Return an error after 10 seconds if connection could not be established
+      acquireTimeoutMillis: 10000, // Return an error after 10 seconds if a client cannot be acquired
+      statement_timeout: 30000, // Cancel any statement that takes more than 30 seconds
+      query_timeout: 30000, // Cancel any query that takes more than 30 seconds
+    }
+  : {
+      user: process.env.DB_USER || "postgres",
+      host: process.env.DB_HOST || "localhost",
+      database: process.env.DB_NAME || "broker_platform",
+      password: process.env.DB_PASSWORD || "YOUR_ACTUAL_PASSWORD_HERE",
+      port: parseInt(process.env.DB_PORT || "5432"),
+      max: 20, // Maximum number of clients in the pool
+      idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+      connectionTimeoutMillis: 10000, // Return an error after 10 seconds if connection could not be established
+      acquireTimeoutMillis: 10000, // Return an error after 10 seconds if a client cannot be acquired
+      statement_timeout: 30000, // Cancel any statement that takes more than 30 seconds
+      query_timeout: 30000, // Cancel any query that takes more than 30 seconds
+    };
 
 // Create a connection pool
 const pool = new Pool(dbConfig);

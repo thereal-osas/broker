@@ -2,18 +2,21 @@
 
 /**
  * Production Database Migration Script for Railway PostgreSQL
- * 
+ *
  * This script will:
  * 1. Connect to your Railway PostgreSQL database
  * 2. Run all necessary migrations to set up the schema
  * 3. Create initial data if needed
- * 
+ *
  * Usage:
  * node scripts/migrate-production.js
- * 
+ *
  * Make sure to set your DATABASE_URL environment variable first:
  * export DATABASE_URL="postgresql://username:password@host:port/database"
  */
+
+// Load environment variables
+require('dotenv').config();
 
 const { Pool } = require('pg');
 const fs = require('fs');

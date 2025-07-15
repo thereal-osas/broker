@@ -2,10 +2,13 @@
 
 /**
  * Database Verification Script
- * 
+ *
  * This script verifies that your Railway PostgreSQL database is properly set up
  * and all tables exist with the correct structure.
  */
+
+// Load environment variables
+require('dotenv').config();
 
 const { Pool } = require('pg');
 

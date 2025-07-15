@@ -2,12 +2,15 @@
 
 /**
  * Database Seeding Script
- * 
+ *
  * This script populates empty database tables with essential data
  * including admin users, investment plans, and system settings.
- * 
+ *
  * Safe to run multiple times - checks for existing data before inserting.
  */
+
+// Load environment variables
+require('dotenv').config();
 
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');

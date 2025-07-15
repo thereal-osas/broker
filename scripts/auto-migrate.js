@@ -2,10 +2,10 @@
 
 /**
  * Automated Database Migration Runner for Vercel Deployment
- * 
+ *
  * This script runs automatically during Vercel deployment to ensure
  * the database is properly set up before the application starts.
- * 
+ *
  * Features:
  * - Runs during build process
  * - Idempotent (safe to run multiple times)
@@ -14,6 +14,9 @@
  * - Logs all operations for debugging
  * - Optimized for serverless environment
  */
+
+// Load environment variables
+require('dotenv').config();
 
 const { MigrationSystem } = require('../lib/migrations');
 const { getMigrationDefinitions } = require('../lib/migration-definitions');
