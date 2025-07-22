@@ -96,6 +96,8 @@ export default function SupportPage() {
       if (response.ok) {
         const data = await response.json();
         setMessages(data);
+      } else {
+        console.error("Failed to fetch messages:", response.status, response.statusText);
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -144,7 +146,24 @@ export default function SupportPage() {
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedTicket) return;
+    if (!newMessage.trim() || !selectedTicket || !session?.user) return;
+
+    const messageText = newMessage.trim();
+
+    // Optimistically add message to UI
+    const optimisticMessage = {
+      id: `temp-${Date.now()}`,
+      ticket_id: selectedTicket.id,
+      sender_id: session.user.id,
+      message: messageText,
+      message_type: 'user',
+      sender_name: session.user.name || 'You',
+      sender_role: session.user.role || 'investor',
+      created_at: new Date().toISOString(),
+    };
+
+    setMessages(prev => [...prev, optimisticMessage]);
+    setNewMessage("");
 
     try {
       const response = await fetch("/api/support/messages", {
@@ -154,20 +173,28 @@ export default function SupportPage() {
         },
         body: JSON.stringify({
           ticketId: selectedTicket.id,
-          message: newMessage,
+          message: messageText,
         }),
       });
 
       if (response.ok) {
-        setNewMessage("");
-        fetchMessages(selectedTicket.id);
+        const result = await response.json();
+        // Refresh messages to get the actual message with correct ID
+        setTimeout(() => fetchMessages(selectedTicket.id), 100);
         fetchTickets(); // Refresh ticket list to update message count
       } else {
         const errorData = await response.json();
+        console.error("Failed to send message:", errorData);
+        // Remove optimistic message on error
+        setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+        setNewMessage(messageText); // Restore message text
         toast.error(errorData.error || "Failed to send message");
       }
     } catch (error) {
       console.error("Error sending message:", error);
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+      setNewMessage(messageText); // Restore message text
       toast.error("An error occurred while sending the message");
     }
   };
@@ -339,8 +366,10 @@ export default function SupportPage() {
                           ? "bg-blue-100 text-blue-900"
                           : message.message_type === "bot"
                           ? "bg-purple-100 text-purple-900"
-                          : "bg-green-500 text-white"
-                      }`}
+                          : message.sender_id === session?.user?.id
+                          ? "bg-green-500 text-white"
+                          : "bg-gray-100 text-gray-900"
+                      } ${message.id?.startsWith('temp-') ? 'opacity-75' : ''}`}
                     >
                       <div className="flex items-center space-x-2 mb-1">
                         {message.message_type === "bot" ? (
