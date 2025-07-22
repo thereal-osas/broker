@@ -69,11 +69,11 @@ async function testSupportSystem() {
       const testUser = userResult.rows[0];
       console.log(`Using test user: ${testUser.email}`);
       
-      // Create test ticket
+      // Create test ticket (handle both old and new schema)
       const ticketResult = await client.query(`
         INSERT INTO support_tickets (
-          user_id, subject, description, category, priority, status
-        ) VALUES ($1, $2, $3, $4, $5, $6)
+          user_id, subject, message, description, category, priority, status
+        ) VALUES ($1, $2, $3, $3, $4, $5, $6)
         RETURNING *
       `, [
         testUser.id,

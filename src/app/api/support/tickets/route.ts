@@ -101,16 +101,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the ticket
+    // Create the ticket (handle both old and new schema)
     const ticketResult = await db.query(`
       INSERT INTO support_tickets (
-        user_id, subject, description, category, priority, status
-      ) VALUES ($1, $2, $3, $4, $5, $6)
+        user_id, subject, message, description, category, priority, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `, [
       session.user.id,
       subject,
-      description,
+      description, // for message column (legacy)
+      description, // for description column (new)
       category || 'general',
       priority || 'medium',
       'open'
