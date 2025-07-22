@@ -8,21 +8,14 @@ import {
   TrendingUp,
   Plus,
   Edit,
-  Trash2,
   DollarSign,
-  Calendar,
   Percent,
   Users,
-  Eye,
   Pause,
   Play,
   Search,
-  Filter,
   BarChart3,
-  Settings,
   CheckCircle,
-  XCircle,
-  AlertCircle,
   RefreshCw,
 } from "lucide-react";
 import { useToast } from "../../../hooks/useToast";
@@ -95,7 +88,7 @@ export default function AdminInvestmentsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<InvestmentPlan | null>(null);
-  const [selectedInvestment, setSelectedInvestment] = useState<UserInvestment | null>(null);
+
   
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -428,7 +421,7 @@ export default function AdminInvestmentsPage() {
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as 'plans' | 'investments' | 'analytics')}
               className={`${
                 activeTab === tab.id
                   ? 'border-blue-500 text-blue-600'
@@ -713,12 +706,7 @@ export default function AdminInvestmentsPage() {
                           >
                             {investment.status === 'active' ? 'Deactivate' : 'Activate'}
                           </button>
-                          <button
-                            onClick={() => setSelectedInvestment(investment)}
-                            className="px-3 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded text-xs font-medium"
-                          >
-                            <Eye className="h-3 w-3" />
-                          </button>
+
                         </div>
                       </td>
                     </tr>

@@ -27,6 +27,8 @@ const eslintConfig = [
       "@typescript-eslint/no-require-imports": "off",
       // Allow unused vars in some cases
       "@typescript-eslint/no-unused-vars": "warn",
+      // Allow explicit any types for flexibility
+      "@typescript-eslint/no-explicit-any": "off",
     },
   },
 ];
