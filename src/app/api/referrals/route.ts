@@ -39,28 +39,24 @@ export async function GET() {
     const statsResult = await db.query(statsQuery, [session.user.id]);
     const stats = statsResult.rows[0];
 
-    // Get detailed referral list
+    // Get detailed referral list (without investment details for privacy)
     const referralsQuery = `
-      SELECT 
+      SELECT
         u.id,
         u.first_name,
         u.last_name,
         u.email,
         u.created_at,
-        COALESCE(SUM(ui.amount), 0) as total_invested,
         r.commission_earned
       FROM referrals r
       JOIN users u ON r.referred_id = u.id
-      LEFT JOIN user_investments ui ON u.id = ui.user_id
       WHERE r.referrer_id = $1
-      GROUP BY u.id, u.first_name, u.last_name, u.email, u.created_at, r.commission_earned
       ORDER BY u.created_at DESC
     `;
     const referralsResult = await db.query(referralsQuery, [session.user.id]);
 
     const referrals = referralsResult.rows.map((referral: Record<string, unknown>) => ({
       ...referral,
-      total_invested: parseFloat(String(referral.total_invested || 0)),
       commission_earned: parseFloat(String(referral.commission_earned || 0)),
     }));
 

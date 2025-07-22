@@ -45,9 +45,23 @@ export default function TransactionsPage() {
     }
   };
 
+  const getTransactionDisplayLabel = (type: string) => {
+    switch (type) {
+      case "admin_funding":
+        return "Deposit";
+      case "admin_deduction":
+        return "Alert";
+      case "referral_commission":
+        return "Referral Commission";
+      default:
+        return type.replace("_", " ");
+    }
+  };
+
   const getTransactionIcon = (type: string) => {
     switch (type) {
       case "deposit":
+      case "admin_funding":
         return <ArrowUpRight className="w-5 h-5 text-green-500" />;
       case "withdrawal":
         return <ArrowDownRight className="w-5 h-5 text-red-500" />;
@@ -59,6 +73,8 @@ export default function TransactionsPage() {
         return <Gift className="w-5 h-5 text-orange-500" />;
       case "referral_commission":
         return <Gift className="w-5 h-5 text-purple-500" />;
+      case "admin_deduction":
+        return <ArrowDownRight className="w-5 h-5 text-red-500" />;
       default:
         return <CreditCard className="w-5 h-5 text-gray-500" />;
     }
@@ -67,12 +83,14 @@ export default function TransactionsPage() {
   const getTransactionColor = (type: string) => {
     switch (type) {
       case "deposit":
+      case "admin_funding":
       case "profit":
       case "bonus":
       case "referral_commission":
         return "text-green-600";
       case "withdrawal":
       case "investment":
+      case "admin_deduction":
         return "text-red-600";
       default:
         return "text-gray-600";
@@ -82,12 +100,14 @@ export default function TransactionsPage() {
   const getAmountPrefix = (type: string) => {
     switch (type) {
       case "deposit":
+      case "admin_funding":
       case "profit":
       case "bonus":
       case "referral_commission":
         return "+";
       case "withdrawal":
       case "investment":
+      case "admin_deduction":
         return "-";
       default:
         return "";
@@ -174,7 +194,7 @@ export default function TransactionsPage() {
                     </div>
                     <div>
                       <h3 className="text-sm font-medium text-gray-900 capitalize">
-                        {transaction.type.replace("_", " ")}
+                        {getTransactionDisplayLabel(transaction.type)}
                       </h3>
                       <p className="text-sm text-gray-500">
                         {transaction.description}

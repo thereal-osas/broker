@@ -5,7 +5,17 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
+  TrendingUp,
+  Plus,
+  Edit,
   Trash2,
+  DollarSign,
+  Calendar,
+  Percent,
+  Users,
+  Eye,
+  Pause,
+  Play,
 } from "lucide-react";
 import { useToast } from "../../../hooks/useToast";
 
@@ -23,11 +33,38 @@ interface InvestmentPlan {
   total_invested?: number;
 }
 
+interface UserInvestment {
+  id: string;
+  user_id: string;
+  plan_id: string;
+  amount: number;
+  status: string;
+  total_profit: number;
+  created_at: string;
+  user_name: string;
+  user_email: string;
+  plan_name: string;
+}
+
 export default function AdminInvestmentsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [plans, setPlans] = useState<InvestmentPlan[]>([]);
+  const [userInvestments, setUserInvestments] = useState<UserInvestment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'plans' | 'investments'>('plans');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<InvestmentPlan | null>(null);
+  const [planForm, setPlanForm] = useState({
+    name: '',
+    description: '',
+    min_amount: 0,
+    max_amount: 0,
+    daily_profit_rate: 0,
+    duration_days: 0,
+    is_active: true,
+  });
   const toast = useToast();
 
   useEffect(() => {

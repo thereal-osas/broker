@@ -75,6 +75,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate specific fields based on withdrawal method
+    if (withdrawalMethod === "bank_transfer") {
+      const { bankName, accountName, accountNumber, routingNumber } = accountDetails;
+      if (!bankName || !accountName || !accountNumber || !routingNumber) {
+        return NextResponse.json(
+          { error: "All bank details are required for bank transfer" },
+          { status: 400 }
+        );
+      }
+    } else if (withdrawalMethod === "crypto") {
+      const { walletAddress } = accountDetails;
+      if (!walletAddress) {
+        return NextResponse.json(
+          { error: "Wallet address is required for cryptocurrency withdrawal" },
+          { status: 400 }
+        );
+      }
+    } else if (withdrawalMethod === "paypal") {
+      const { paypalId } = accountDetails;
+      if (!paypalId) {
+        return NextResponse.json(
+          { error: "PayPal ID/Email is required for PayPal withdrawal" },
+          { status: 400 }
+        );
+      }
+      // Basic email validation for PayPal ID
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(paypalId)) {
+        return NextResponse.json(
+          { error: "Please enter a valid email address for PayPal ID" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Check user balance
     const userBalance = await balanceQueries.getUserBalance(session.user.id);
     if (!userBalance || userBalance.total_balance < amount) {

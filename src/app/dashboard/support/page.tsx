@@ -6,20 +6,19 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   MessageSquare,
+  Plus,
   Clock,
   CheckCircle,
   AlertCircle,
   Send,
+  Bot,
   User,
   Shield,
-  Bot,
-  Filter,
 } from "lucide-react";
 import { useToast } from "../../../hooks/useToast";
 
 interface SupportTicket {
   id: string;
-  user_id: string;
   subject: string;
   description: string;
   status: string;
@@ -27,11 +26,9 @@ interface SupportTicket {
   category: string;
   created_at: string;
   updated_at: string;
-  user_name: string;
-  user_email: string;
-  assigned_admin_name?: string;
   message_count: number;
   last_message_at: string;
+  assigned_admin_name?: string;
 }
 
 interface SupportMessage {
@@ -40,13 +37,12 @@ interface SupportMessage {
   sender_id: string;
   message: string;
   message_type: string;
-  is_internal: boolean;
   sender_name: string;
   sender_role: string;
   created_at: string;
 }
 
-export default function AdminSupportPage() {
+export default function SupportPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const toast = useToast();
@@ -54,10 +50,14 @@ export default function AdminSupportPage() {
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showNewTicket, setShowNewTicket] = useState(false);
   const [newMessage, setNewMessage] = useState("");
-  const [isInternal, setIsInternal] = useState(false);
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [newTicketForm, setNewTicketForm] = useState({
+    subject: "",
+    description: "",
+    category: "general",
+    priority: "medium",
+  });
 
   useEffect(() => {
     if (status === "loading") return;
@@ -67,8 +67,8 @@ export default function AdminSupportPage() {
       return;
     }
 
-    if (session.user.role !== "admin") {
-      router.push("/dashboard");
+    if (session.user.role === "admin") {
+      router.push("/admin/support");
       return;
     }
 
@@ -77,12 +77,7 @@ export default function AdminSupportPage() {
 
   const fetchTickets = async () => {
     try {
-      let url = "/api/support/tickets?limit=50";
-      if (statusFilter !== "all") {
-        url += `&status=${statusFilter}`;
-      }
-      
-      const response = await fetch(url);
+      const response = await fetch("/api/support/tickets");
       if (response.ok) {
         const data = await response.json();
         setTickets(data);
@@ -108,6 +103,46 @@ export default function AdminSupportPage() {
     }
   };
 
+  const createTicket = async () => {
+    if (!newTicketForm.subject || !newTicketForm.description) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/support/tickets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newTicketForm),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast.success("Support ticket created successfully");
+        setShowNewTicket(false);
+        setNewTicketForm({
+          subject: "",
+          description: "",
+          category: "general",
+          priority: "medium",
+        });
+        fetchTickets();
+        
+        if (result.hasAutoResponse) {
+          toast.info("You received an automated response!");
+        }
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to create ticket");
+      }
+    } catch (error) {
+      console.error("Error creating ticket:", error);
+      toast.error("An error occurred while creating the ticket");
+    }
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedTicket) return;
 
@@ -120,15 +155,13 @@ export default function AdminSupportPage() {
         body: JSON.stringify({
           ticketId: selectedTicket.id,
           message: newMessage,
-          isInternal,
         }),
       });
 
       if (response.ok) {
         setNewMessage("");
-        setIsInternal(false);
         fetchMessages(selectedTicket.id);
-        fetchTickets(); // Refresh ticket list
+        fetchTickets(); // Refresh ticket list to update message count
       } else {
         const errorData = await response.json();
         toast.error(errorData.error || "Failed to send message");
@@ -169,13 +202,6 @@ export default function AdminSupportPage() {
     }
   };
 
-  const filteredTickets = tickets.filter(ticket => {
-    if (priorityFilter !== "all" && ticket.priority !== priorityFilter) {
-      return false;
-    }
-    return true;
-  });
-
   if (status === "loading" || isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -187,64 +213,36 @@ export default function AdminSupportPage() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Support Management</h1>
-        <p className="text-gray-600">Manage customer support tickets and conversations</p>
-      </div>
-
-      {/* Filters */}
-      <div className="mb-6 flex space-x-4">
-        <div className="flex items-center space-x-2">
-          <Filter className="w-4 h-4 text-gray-500" />
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              fetchTickets();
-            }}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">All Status</option>
-            <option value="open">Open</option>
-            <option value="in_progress">In Progress</option>
-            <option value="resolved">Resolved</option>
-            <option value="closed">Closed</option>
-          </select>
-        </div>
-        
-        <select
-          value={priorityFilter}
-          onChange={(e) => setPriorityFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="all">All Priority</option>
-          <option value="urgent">Urgent</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </select>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Support Center</h1>
+        <p className="text-gray-600">Get help with your account and investments</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Tickets List */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-xl shadow-lg">
-            <div className="p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Support Tickets ({filteredTickets.length})
-              </h2>
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-gray-900">My Tickets</h2>
+              <button
+                onClick={() => setShowNewTicket(true)}
+                className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                New
+              </button>
             </div>
 
             <div className="max-h-96 overflow-y-auto">
-              {filteredTickets.length === 0 ? (
+              {tickets.length === 0 ? (
                 <div className="p-6 text-center">
                   <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No tickets found</h3>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No tickets yet</h3>
                   <p className="mt-1 text-sm text-gray-500">
-                    No support tickets match the current filters.
+                    Create your first support ticket to get help.
                   </p>
                 </div>
               ) : (
-                filteredTickets.map((ticket) => (
+                tickets.map((ticket) => (
                   <div
                     key={ticket.id}
                     onClick={() => {
@@ -263,9 +261,6 @@ export default function AdminSupportPage() {
                             {ticket.subject}
                           </h3>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          From: {ticket.user_name} ({ticket.user_email})
-                        </p>
                         <p className="text-xs text-gray-500 mt-1 line-clamp-2">
                           {ticket.description}
                         </p>
@@ -280,9 +275,6 @@ export default function AdminSupportPage() {
                           <span className="text-xs text-gray-500">
                             {ticket.message_count} messages
                           </span>
-                        </div>
-                        <div className="text-xs text-gray-400 mt-1">
-                          {new Date(ticket.created_at).toLocaleDateString()}
                         </div>
                       </div>
                     </div>
@@ -304,12 +296,6 @@ export default function AdminSupportPage() {
                     <h3 className="text-lg font-semibold text-gray-900">
                       {selectedTicket.subject}
                     </h3>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <User className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm text-gray-600">
-                        {selectedTicket.user_name} ({selectedTicket.user_email})
-                      </span>
-                    </div>
                     <div className="flex items-center space-x-2 mt-1">
                       {getStatusIcon(selectedTicket.status)}
                       <span className="text-sm text-gray-500 capitalize">
@@ -338,16 +324,14 @@ export default function AdminSupportPage() {
                     key={message.id}
                     className={`flex ${
                       message.sender_role === "admin" || message.message_type === "bot"
-                        ? "justify-end"
-                        : "justify-start"
+                        ? "justify-start"
+                        : "justify-end"
                     }`}
                   >
                     <div
                       className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
                         message.sender_role === "admin"
-                          ? message.is_internal
-                            ? "bg-red-100 text-red-900 border border-red-200"
-                            : "bg-blue-100 text-blue-900"
+                          ? "bg-blue-100 text-blue-900"
                           : message.message_type === "bot"
                           ? "bg-purple-100 text-purple-900"
                           : "bg-gray-100 text-gray-900"
@@ -366,11 +350,6 @@ export default function AdminSupportPage() {
                             ? "Support Bot"
                             : message.sender_name}
                         </span>
-                        {message.is_internal && (
-                          <span className="text-xs bg-red-200 text-red-800 px-1 rounded">
-                            Internal
-                          </span>
-                        )}
                       </div>
                       <p className="text-sm">{message.message}</p>
                       <p className="text-xs opacity-75 mt-1">
@@ -383,24 +362,13 @@ export default function AdminSupportPage() {
 
               {/* Message Input */}
               <div className="p-4 border-t border-gray-200">
-                <div className="flex items-center space-x-2 mb-2">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={isInternal}
-                      onChange={(e) => setIsInternal(e.target.checked)}
-                      className="mr-2"
-                    />
-                    <span className="text-sm text-gray-600">Internal note (not visible to user)</span>
-                  </label>
-                </div>
                 <div className="flex space-x-2">
                   <input
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                    placeholder={isInternal ? "Internal note..." : "Reply to user..."}
+                    placeholder="Type your message..."
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <button
@@ -421,13 +389,109 @@ export default function AdminSupportPage() {
                   Select a ticket to view conversation
                 </h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  Choose a ticket from the list to start managing the support conversation.
+                  Choose a ticket from the list to start chatting with support.
                 </p>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* New Ticket Modal */}
+      {showNewTicket && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Create New Support Ticket
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Subject *
+                </label>
+                <input
+                  type="text"
+                  value={newTicketForm.subject}
+                  onChange={(e) =>
+                    setNewTicketForm(prev => ({ ...prev, subject: e.target.value }))
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Brief description of your issue"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Category
+                </label>
+                <select
+                  value={newTicketForm.category}
+                  onChange={(e) =>
+                    setNewTicketForm(prev => ({ ...prev, category: e.target.value }))
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="general">General</option>
+                  <option value="account">Account</option>
+                  <option value="investment">Investment</option>
+                  <option value="withdrawal">Withdrawal</option>
+                  <option value="technical">Technical</option>
+                  <option value="billing">Billing</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Priority
+                </label>
+                <select
+                  value={newTicketForm.priority}
+                  onChange={(e) =>
+                    setNewTicketForm(prev => ({ ...prev, priority: e.target.value }))
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description *
+                </label>
+                <textarea
+                  value={newTicketForm.description}
+                  onChange={(e) =>
+                    setNewTicketForm(prev => ({ ...prev, description: e.target.value }))
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={4}
+                  placeholder="Please describe your issue in detail..."
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setShowNewTicket(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createTicket}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Create Ticket
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

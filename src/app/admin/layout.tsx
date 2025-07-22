@@ -31,6 +31,7 @@ const navigation = [
   },
   { name: "Deposits", href: "/admin/deposits", icon: CreditCard },
   { name: "Withdrawals", href: "/admin/withdrawals", icon: ArrowDownRight },
+  { name: "Referrals", href: "/admin/referrals", icon: Users },
   { name: "Newsletter", href: "/admin/newsletter", icon: FileText },
   { name: "Support", href: "/admin/support", icon: MessageSquare },
   { name: "Settings", href: "/admin/settings", icon: Settings },

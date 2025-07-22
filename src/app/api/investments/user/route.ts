@@ -121,6 +121,31 @@ export async function POST(request: NextRequest) {
         status: "completed",
       });
 
+      // Check if user was referred and calculate commission
+      const referralQuery = `
+        SELECT r.*, s.default_referral_commission
+        FROM referrals r
+        CROSS JOIN settings s
+        WHERE r.referred_id = $1 AND r.status = 'active'
+      `;
+      const referralResult = await db.query(referralQuery, [session.user.id]);
+
+      if (referralResult.rows.length > 0) {
+        const referral = referralResult.rows[0];
+        const commissionRate = parseFloat(referral.commission_rate || referral.default_referral_commission || 0.05);
+        const commissionAmount = amount * commissionRate;
+
+        // Update referral commission
+        await db.query(`
+          UPDATE referrals
+          SET commission_earned = commission_earned + $1,
+              total_commission = total_commission + $1
+          WHERE id = $2
+        `, [commissionAmount, referral.id]);
+
+        console.log(`Referral commission calculated: $${commissionAmount.toFixed(2)} for investment of $${amount}`);
+      }
+
       return { investment, transaction };
     });
 

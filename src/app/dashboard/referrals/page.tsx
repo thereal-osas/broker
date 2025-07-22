@@ -28,7 +28,6 @@ interface ReferralData {
     last_name: string;
     email: string;
     created_at: string;
-    total_invested: number;
     commission_earned: number;
   }>;
 }
@@ -325,9 +324,6 @@ export default function ReferralsPage() {
                       Joined
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total Invested
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Your Commission
                     </th>
                   </tr>
@@ -357,14 +353,6 @@ export default function ReferralsPage() {
                           <Calendar className="h-4 w-4 text-gray-400 mr-2" />
                           <span className="text-sm text-gray-900">
                             {new Date(referral.created_at).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <TrendingUp className="h-4 w-4 text-green-600 mr-2" />
-                          <span className="text-sm font-medium text-gray-900">
-                            ${(typeof referral.total_invested === 'number' ? referral.total_invested : parseFloat(referral.total_invested || "0")).toFixed(2)}
                           </span>
                         </div>
                       </td>

@@ -8,12 +8,19 @@ import {
   UserCheck,
   UserX,
   XCircle,
+  Eye,
+  Key,
+  Mail,
+  Phone,
+  Calendar,
+  Shield,
 } from "lucide-react";
 import BalanceManager from "../../../components/admin/BalanceManager";
 
 interface User {
   id: string;
   email: string;
+  password: string;
   first_name: string;
   last_name: string;
   phone: string;
@@ -21,7 +28,9 @@ interface User {
   is_active: boolean;
   email_verified: boolean;
   referral_code: string;
+  referred_by: string | null;
   created_at: string;
+  updated_at: string;
   balance?: {
     total_balance: number;
     profit_balance: number;
@@ -37,6 +46,7 @@ export default function AdminUsers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showBalanceManager, setShowBalanceManager] = useState(false);
+  const [showUserDetails, setShowUserDetails] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -223,6 +233,16 @@ export default function AdminUsers() {
                     <button
                       onClick={() => {
                         setSelectedUser(user);
+                        setShowUserDetails(true);
+                      }}
+                      className="text-purple-600 hover:text-purple-900 p-1 rounded"
+                      title="View Details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedUser(user);
                         setShowBalanceManager(true);
                       }}
                       className="text-blue-600 hover:text-blue-900 p-1 rounded"
@@ -298,6 +318,194 @@ export default function AdminUsers() {
                 setShowBalanceManager(false);
               }}
             />
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* User Details Modal */}
+      {showUserDetails && selectedUser && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900">
+                User Details: {selectedUser.first_name} {selectedUser.last_name}
+              </h2>
+              <button
+                onClick={() => setShowUserDetails(false)}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Personal Information */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <Shield className="w-5 h-5 mr-2" />
+                  Personal Information
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center">
+                    <Mail className="w-4 h-4 text-gray-400 mr-2" />
+                    <span className="text-sm font-medium text-gray-600 w-20">Email:</span>
+                    <span className="text-sm text-gray-900">{selectedUser.email}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Key className="w-4 h-4 text-gray-400 mr-2" />
+                    <span className="text-sm font-medium text-gray-600 w-20">Password:</span>
+                    <span className="text-sm text-gray-900 font-mono bg-gray-200 px-2 py-1 rounded">
+                      {selectedUser.password}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <Phone className="w-4 h-4 text-gray-400 mr-2" />
+                    <span className="text-sm font-medium text-gray-600 w-20">Phone:</span>
+                    <span className="text-sm text-gray-900">{selectedUser.phone || 'Not provided'}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Calendar className="w-4 h-4 text-gray-400 mr-2" />
+                    <span className="text-sm font-medium text-gray-600 w-20">Joined:</span>
+                    <span className="text-sm text-gray-900">
+                      {new Date(selectedUser.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Account Status */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <UserCheck className="w-5 h-5 mr-2" />
+                  Account Status
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600">Role:</span>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                      selectedUser.role === 'admin'
+                        ? 'bg-purple-100 text-purple-800'
+                        : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {selectedUser.role}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600">Status:</span>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                      selectedUser.is_active
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {selectedUser.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600">Email Verified:</span>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                      selectedUser.email_verified
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {selectedUser.email_verified ? 'Verified' : 'Unverified'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600">Referral Code:</span>
+                    <span className="text-sm text-gray-900 font-mono bg-gray-200 px-2 py-1 rounded">
+                      {selectedUser.referral_code}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Balance Information */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <DollarSign className="w-5 h-5 mr-2" />
+                  Balance Information
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600">Total Balance:</span>
+                    <span className="text-sm font-bold text-green-600">
+                      ${selectedUser.balance?.total_balance?.toFixed(2) || '0.00'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600">Profit Balance:</span>
+                    <span className="text-sm text-gray-900">
+                      ${selectedUser.balance?.profit_balance?.toFixed(2) || '0.00'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600">Deposit Balance:</span>
+                    <span className="text-sm text-gray-900">
+                      ${selectedUser.balance?.deposit_balance?.toFixed(2) || '0.00'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600">Bonus Balance:</span>
+                    <span className="text-sm text-gray-900">
+                      ${selectedUser.balance?.bonus_balance?.toFixed(2) || '0.00'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Information */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Additional Information
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600">User ID:</span>
+                    <span className="text-xs text-gray-500 font-mono">{selectedUser.id}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600">Referred By:</span>
+                    <span className="text-sm text-gray-900">
+                      {selectedUser.referred_by ? 'Yes' : 'Direct signup'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600">Last Updated:</span>
+                    <span className="text-sm text-gray-900">
+                      {new Date(selectedUser.updated_at || selectedUser.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowUserDetails(false);
+                  setShowBalanceManager(true);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Manage Balance
+              </button>
+              <button
+                onClick={() => setShowUserDetails(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </motion.div>
         </motion.div>
       )}

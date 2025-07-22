@@ -32,6 +32,8 @@ export default function WithdrawPage() {
     accountNumber: "",
     accountName: "",
     routingNumber: "",
+    walletAddress: "",
+    paypalId: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [withdrawalRequests, setWithdrawalRequests] = useState<
@@ -79,6 +81,8 @@ export default function WithdrawPage() {
           accountNumber: "",
           accountName: "",
           routingNumber: "",
+          walletAddress: "",
+          paypalId: "",
         });
         setShowForm(false);
         fetchWithdrawalRequests();
@@ -271,6 +275,58 @@ export default function WithdrawPage() {
                 </div>
               )}
 
+              {withdrawalMethod === "crypto" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Cryptocurrency Wallet Address
+                    </label>
+                    <input
+                      type="text"
+                      value={accountDetails.walletAddress}
+                      onChange={(e) =>
+                        setAccountDetails((prev) => ({
+                          ...prev,
+                          walletAddress: e.target.value,
+                        }))
+                      }
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter your crypto wallet address"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Please ensure the wallet address is correct. Incorrect addresses may result in loss of funds.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {withdrawalMethod === "paypal" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      PayPal ID/Email
+                    </label>
+                    <input
+                      type="email"
+                      value={accountDetails.paypalId}
+                      onChange={(e) =>
+                        setAccountDetails((prev) => ({
+                          ...prev,
+                          paypalId: e.target.value,
+                        }))
+                      }
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter your PayPal email address"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Enter the email address associated with your PayPal account.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -280,7 +336,12 @@ export default function WithdrawPage() {
                   !amount ||
                   parseFloat(amount) < 50 ||
                   parseFloat(amount) > availableBalance ||
-                  parseFloat(amount) > maxWithdrawal
+                  parseFloat(amount) > maxWithdrawal ||
+                  (withdrawalMethod === "bank_transfer" &&
+                    (!accountDetails.bankName || !accountDetails.accountName ||
+                     !accountDetails.accountNumber || !accountDetails.routingNumber)) ||
+                  (withdrawalMethod === "crypto" && !accountDetails.walletAddress) ||
+                  (withdrawalMethod === "paypal" && !accountDetails.paypalId)
                 }
                 className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >

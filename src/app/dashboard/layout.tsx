@@ -17,6 +17,9 @@ import {
   Menu,
   X,
   Mail,
+  MessageSquare,
+  Share2,
+  User,
 } from "lucide-react";
 
 const navigation = [
@@ -27,6 +30,7 @@ const navigation = [
   { name: "Transactions", href: "/dashboard/transactions", icon: History },
   { name: "Newsletters", href: "/dashboard/newsletters", icon: Mail },
   { name: "Referrals", href: "/dashboard/referrals", icon: Share2 },
+  { name: "Support", href: "/dashboard/support", icon: MessageSquare },
   { name: "Profile", href: "/dashboard/profile", icon: User },
 ];
 
