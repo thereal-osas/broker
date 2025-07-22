@@ -149,20 +149,6 @@ export default function SupportPage() {
     if (!newMessage.trim() || !selectedTicket || !session?.user) return;
 
     const messageText = newMessage.trim();
-
-    // Optimistically add message to UI
-    const optimisticMessage = {
-      id: `temp-${Date.now()}`,
-      ticket_id: selectedTicket.id,
-      sender_id: session.user.id,
-      message: messageText,
-      message_type: 'user',
-      sender_name: session.user.name || 'You',
-      sender_role: session.user.role || 'investor',
-      created_at: new Date().toISOString(),
-    };
-
-    setMessages(prev => [...prev, optimisticMessage]);
     setNewMessage("");
 
     try {
@@ -179,21 +165,24 @@ export default function SupportPage() {
 
       if (response.ok) {
         const result = await response.json();
-        // Refresh messages to get the actual message with correct ID
-        setTimeout(() => fetchMessages(selectedTicket.id), 100);
+
+        // Add the new message directly to the state using the server response
+        if (result.data) {
+          setMessages(prev => [...prev, result.data]);
+        } else {
+          // Fallback: refresh all messages if data is not in expected format
+          setTimeout(() => fetchMessages(selectedTicket.id), 500);
+        }
+
         fetchTickets(); // Refresh ticket list to update message count
       } else {
         const errorData = await response.json();
         console.error("Failed to send message:", errorData);
-        // Remove optimistic message on error
-        setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
         setNewMessage(messageText); // Restore message text
         toast.error(errorData.error || "Failed to send message");
       }
     } catch (error) {
       console.error("Error sending message:", error);
-      // Remove optimistic message on error
-      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
       setNewMessage(messageText); // Restore message text
       toast.error("An error occurred while sending the message");
     }
@@ -369,7 +358,7 @@ export default function SupportPage() {
                           : message.sender_id === session?.user?.id
                           ? "bg-green-500 text-white"
                           : "bg-gray-100 text-gray-900"
-                      } ${message.id?.startsWith('temp-') ? 'opacity-75' : ''}`}
+                      }`}
                     >
                       <div className="flex items-center space-x-2 mb-1">
                         {message.message_type === "bot" ? (
