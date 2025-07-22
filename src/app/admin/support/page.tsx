@@ -15,7 +15,7 @@ import {
   Bot,
   Filter,
 } from "lucide-react";
-import { useToast } from "../../../hooks/useToast";
+import { useToast } from "@/hooks/useToast";
 
 interface SupportTicket {
   id: string;

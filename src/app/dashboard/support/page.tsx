@@ -15,7 +15,7 @@ import {
   User,
   Shield,
 } from "lucide-react";
-import { useToast } from "../../../hooks/useToast";
+import { useToast } from "@/hooks/useToast";
 
 interface SupportTicket {
   id: string;
