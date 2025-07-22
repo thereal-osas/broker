@@ -18,8 +18,6 @@ import {
   X,
   Mail,
   MessageSquare,
-  Share2,
-  User,
 } from "lucide-react";
 
 const navigation = [
