@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
         amount,
         balanceType: balanceType.replace("_balance", ""),
         description:
-          description || `Admin funding - ${balanceType.replace("_", " ")}`,
+          description || `Investment - ${balanceType.replace("_", " ")}`,
         status: "completed",
       });
 

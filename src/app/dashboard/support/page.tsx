@@ -319,7 +319,12 @@ export default function SupportPage() {
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.map((message) => (
+                {messages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-gray-500">
+                    <p>No messages yet. Start the conversation!</p>
+                  </div>
+                ) : (
+                  messages.map((message) => (
                   <div
                     key={message.id}
                     className={`flex ${
@@ -334,7 +339,7 @@ export default function SupportPage() {
                           ? "bg-blue-100 text-blue-900"
                           : message.message_type === "bot"
                           ? "bg-purple-100 text-purple-900"
-                          : "bg-gray-100 text-gray-900"
+                          : "bg-green-500 text-white"
                       }`}
                     >
                       <div className="flex items-center space-x-2 mb-1">
@@ -357,7 +362,8 @@ export default function SupportPage() {
                       </p>
                     </div>
                   </div>
-                ))}
+                  ))
+                )}
               </div>
 
               {/* Message Input */}
