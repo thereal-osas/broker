@@ -21,6 +21,7 @@ interface Newsletter {
   id: string;
   title: string;
   content: string;
+  image_url?: string;
   author_id: string;
   author_name: string;
   is_published: boolean;
@@ -41,8 +42,11 @@ export default function AdminNewsletterPage() {
   const [formData, setFormData] = useState({
     title: "",
     content: "",
+    image_url: "",
     is_published: false,
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
   const toast = useToast();
 
   useEffect(() => {
@@ -75,6 +79,13 @@ export default function AdminNewsletterPage() {
     setIsLoading(true);
 
     try {
+      let imageUrl = formData.image_url;
+
+      // Upload image if a new file is selected
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile);
+      }
+
       const url = editingNewsletter
         ? `/api/admin/newsletters/${editingNewsletter.id}`
         : "/api/admin/newsletters";
@@ -86,7 +97,10 @@ export default function AdminNewsletterPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          image_url: imageUrl,
+        }),
       });
 
       if (response.ok) {
@@ -101,7 +115,8 @@ export default function AdminNewsletterPage() {
         const error = await response.json();
         toast.error(error.error || "Failed to save newsletter");
       }
-    } catch {
+    } catch (error) {
+      console.error("Error saving newsletter:", error);
       toast.error("An error occurred while saving the newsletter");
     } finally {
       setIsLoading(false);
@@ -113,8 +128,10 @@ export default function AdminNewsletterPage() {
     setFormData({
       title: newsletter.title,
       content: newsletter.content,
+      image_url: newsletter.image_url || "",
       is_published: newsletter.is_published,
     });
+    setImagePreview(newsletter.image_url || "");
     setShowForm(true);
   };
 
@@ -170,8 +187,11 @@ export default function AdminNewsletterPage() {
     setFormData({
       title: "",
       content: "",
+      image_url: "",
       is_published: false,
     });
+    setImageFile(null);
+    setImagePreview("");
     setEditingNewsletter(null);
     setShowForm(false);
   };
@@ -185,6 +205,35 @@ export default function AdminNewsletterPage() {
       [name]:
         type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
     }));
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImage = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to upload image');
+    }
+
+    const data = await response.json();
+    return data.url;
   };
 
   if (status === "loading" || isLoading) {
@@ -278,6 +327,27 @@ export default function AdminNewsletterPage() {
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input"
                       placeholder="Enter newsletter content..."
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Newsletter Image
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    {imagePreview && (
+                      <div className="mt-2">
+                        <img
+                          src={imagePreview}
+                          alt="Newsletter preview"
+                          className="max-w-xs h-32 object-cover rounded-lg"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center">

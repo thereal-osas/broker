@@ -39,7 +39,7 @@ export async function PUT(
     const values = [];
     let paramCount = 1;
 
-    const allowedFields = ['title', 'content', 'is_published'];
+    const allowedFields = ['title', 'content', 'image_url', 'is_published'];
 
     for (const field of allowedFields) {
       if (body[field] !== undefined) {

@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, content, is_published = false } = body;
+    const { title, content, image_url, is_published = false } = body;
 
     // Validation
     if (!title || !content) {
@@ -59,15 +59,16 @@ export async function POST(request: NextRequest) {
 
     const query = `
       INSERT INTO newsletters (
-        title, content, author_id, is_published, published_at
+        title, content, image_url, author_id, is_published, published_at
       )
-      VALUES ($1, $2, $3, $4, $5)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *
     `;
 
     const values = [
       title,
       content,
+      image_url || null,
       session.user.id,
       is_published,
       is_published ? new Date() : null

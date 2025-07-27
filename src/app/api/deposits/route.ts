@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { amount, paymentMethod, paymentProof, transactionHash } = body;
+    const { amount, paymentMethod, paymentProof, transactionHash, paymentProofImage } = body;
 
     // Validate input
     if (!amount || amount <= 0) {
@@ -78,8 +78,8 @@ export async function POST(request: NextRequest) {
 
     // Create deposit request
     const query = `
-      INSERT INTO deposit_requests (user_id, amount, payment_method, payment_proof, transaction_hash, status)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO deposit_requests (user_id, amount, payment_method, payment_proof, payment_proof_image, transaction_hash, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `;
 
@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
       amount,
       paymentMethod,
       paymentProof || "",
+      paymentProofImage || null,
       transactionHash || null,
       "pending",
     ];

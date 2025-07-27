@@ -17,6 +17,8 @@ import {
   BarChart3,
   CheckCircle,
   RefreshCw,
+  Trash2,
+  X,
 } from "lucide-react";
 import { useToast } from "../../../hooks/useToast";
 
@@ -283,7 +285,7 @@ export default function AdminInvestmentsPage() {
   const toggleInvestmentStatus = async (investment: UserInvestment) => {
     try {
       const newStatus = investment.status === 'active' ? 'deactivated' : 'active';
-      
+
       const response = await fetch(`/api/admin/user-investments/${investment.id}`, {
         method: "PUT",
         headers: {
@@ -304,6 +306,79 @@ export default function AdminInvestmentsPage() {
     } catch (error) {
       console.error("Error updating investment status:", error);
       toast.error("An error occurred while updating the investment status");
+    }
+  };
+
+  const togglePlanStatus = async (plan: InvestmentPlan) => {
+    try {
+      const newStatus = !plan.is_active;
+
+      const response = await fetch(`/api/admin/investment-plans/${plan.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          is_active: newStatus,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success(`Plan ${newStatus ? 'activated' : 'deactivated'} successfully`);
+        fetchInvestmentPlans();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to update plan status");
+      }
+    } catch (error) {
+      console.error("Error updating plan status:", error);
+      toast.error("An error occurred while updating the plan status");
+    }
+  };
+
+  const deleteInvestment = async (investment: UserInvestment) => {
+    if (!confirm(`Are you sure you want to delete this investment? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/user-investments/${investment.id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        toast.success("Investment deleted successfully");
+        fetchUserInvestments();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to delete investment");
+      }
+    } catch (error) {
+      console.error("Error deleting investment:", error);
+      toast.error("An error occurred while deleting the investment");
+    }
+  };
+
+  const deletePlan = async (plan: InvestmentPlan) => {
+    if (!confirm(`Are you sure you want to delete the plan "${plan.name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/investment-plans/${plan.id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        toast.success("Investment plan deleted successfully");
+        fetchInvestmentPlans();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to delete plan");
+      }
+    } catch (error) {
+      console.error("Error deleting plan:", error);
+      toast.error("An error occurred while deleting the plan");
     }
   };
 
@@ -507,7 +582,7 @@ export default function AdminInvestmentsPage() {
                   )}
                 </div>
                 
-                <div className="flex space-x-2">
+                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                   <button
                     onClick={() => openEditModal(plan)}
                     className="flex-1 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 flex items-center justify-center"
@@ -516,9 +591,7 @@ export default function AdminInvestmentsPage() {
                     Edit
                   </button>
                   <button
-                    onClick={() => {
-                      // Toggle plan status logic here
-                    }}
+                    onClick={() => togglePlanStatus(plan)}
                     className={`flex-1 px-3 py-2 rounded text-sm flex items-center justify-center ${
                       plan.is_active
                         ? 'bg-red-600 text-white hover:bg-red-700'
@@ -527,6 +600,13 @@ export default function AdminInvestmentsPage() {
                   >
                     {plan.is_active ? <Pause className="h-4 w-4 mr-1" /> : <Play className="h-4 w-4 mr-1" />}
                     {plan.is_active ? 'Deactivate' : 'Activate'}
+                  </button>
+                  <button
+                    onClick={() => deletePlan(plan)}
+                    className="flex-1 bg-gray-600 text-white px-3 py-2 rounded text-sm hover:bg-gray-700 flex items-center justify-center"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete
                   </button>
                 </div>
               </motion.div>
@@ -626,25 +706,25 @@ export default function AdminInvestmentsPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       User
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Plan
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Amount
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Profit
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Created
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -652,7 +732,7 @@ export default function AdminInvestmentsPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredInvestments.map((investment) => (
                     <tr key={investment.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-gray-900">
                             {investment.user_name}
@@ -662,19 +742,19 @@ export default function AdminInvestmentsPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{investment.plan_name}</div>
                         <div className="text-sm text-gray-500">
                           {(investment.daily_profit_rate * 100).toFixed(2)}% daily
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         ${investment.amount.toLocaleString()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         ${investment.total_profit.toLocaleString()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                         <span
                           className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             investment.status === 'active'
@@ -691,11 +771,11 @@ export default function AdminInvestmentsPage() {
                           {investment.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(investment.created_at).toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-2">
                           <button
                             onClick={() => toggleInvestmentStatus(investment)}
                             className={`px-3 py-1 rounded text-xs font-medium ${
@@ -706,7 +786,13 @@ export default function AdminInvestmentsPage() {
                           >
                             {investment.status === 'active' ? 'Deactivate' : 'Activate'}
                           </button>
-
+                          <button
+                            onClick={() => deleteInvestment(investment)}
+                            className="px-3 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center justify-center"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </tr>

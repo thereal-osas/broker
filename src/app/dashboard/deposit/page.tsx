@@ -41,6 +41,8 @@ export default function DepositPage() {
   const [selectedCrypto, setSelectedCrypto] = useState("bitcoin");
   const [transactionHash, setTransactionHash] = useState("");
   const [paymentProof, setPaymentProof] = useState("");
+  const [proofImage, setProofImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [depositRequests, setDepositRequests] = useState<DepositRequest[]>([]);
   const [showForm, setShowForm] = useState(true);
@@ -60,6 +62,35 @@ export default function DepositPage() {
       document.body.removeChild(textArea);
       toast.success("Address copied to clipboard!");
     }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProofImage(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImage = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to upload image');
+    }
+
+    const data = await response.json();
+    return data.url;
   };
 
   const cryptoOptions = [
@@ -89,6 +120,13 @@ export default function DepositPage() {
     setIsLoading(true);
 
     try {
+      let proofImageUrl = "";
+
+      // Upload image if provided
+      if (proofImage) {
+        proofImageUrl = await uploadImage(proofImage);
+      }
+
       const response = await fetch("/api/deposits", {
         method: "POST",
         headers: {
@@ -99,12 +137,15 @@ export default function DepositPage() {
           paymentMethod: `crypto_${selectedCrypto}`,
           transactionHash,
           paymentProof,
+          paymentProofImage: proofImageUrl,
         }),
       });
 
       if (response.ok) {
         setAmount("");
         setPaymentProof("");
+        setProofImage(null);
+        setImagePreview("");
         setShowForm(false);
         fetchDepositRequests();
         toast.success("Deposit request submitted successfully!");
@@ -112,7 +153,8 @@ export default function DepositPage() {
         const errorData = await response.json();
         toast.error(errorData.error || "Failed to submit deposit request");
       }
-    } catch {
+    } catch (error) {
+      console.error("Error submitting deposit:", error);
       toast.error("An error occurred while submitting the request");
     } finally {
       setIsLoading(false);
@@ -304,6 +346,27 @@ export default function DepositPage() {
                   placeholder="Additional notes or proof"
                   rows={3}
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Upload Payment Screenshot (Optional)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+                {imagePreview && (
+                  <div className="mt-2">
+                    <img
+                      src={imagePreview}
+                      alt="Payment proof preview"
+                      className="max-w-xs h-32 object-cover rounded-lg"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">

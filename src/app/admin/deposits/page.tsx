@@ -16,6 +16,7 @@ interface DepositRequest {
   amount: number;
   payment_method: string;
   payment_proof: string;
+  payment_proof_image?: string;
   transaction_hash?: string;
   status: string;
   admin_notes: string;
@@ -297,15 +298,32 @@ export default function AdminDeposits() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Payment Proof
                 </label>
-                <a
-                  href={selectedDeposit.payment_proof}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-800"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span>View Payment Proof</span>
-                </a>
+                {selectedDeposit.payment_proof && (
+                  <div className="mb-2">
+                    <a
+                      href={selectedDeposit.payment_proof}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-800"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>View Payment Proof Text</span>
+                    </a>
+                  </div>
+                )}
+                {selectedDeposit.payment_proof_image && (
+                  <div>
+                    <p className="text-sm text-gray-600 mb-2">Payment Screenshot:</p>
+                    <img
+                      src={selectedDeposit.payment_proof_image}
+                      alt="Payment proof"
+                      className="max-w-full h-64 object-contain rounded-lg border"
+                    />
+                  </div>
+                )}
+                {!selectedDeposit.payment_proof && !selectedDeposit.payment_proof_image && (
+                  <p className="text-sm text-gray-500">No payment proof provided</p>
+                )}
               </div>
 
               {selectedDeposit.admin_notes && (

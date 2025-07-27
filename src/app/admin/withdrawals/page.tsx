@@ -228,7 +228,7 @@ export default function AdminWithdrawalsPage() {
                     Amount
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Method
+                    Method & Details
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -272,9 +272,30 @@ export default function AdminWithdrawalsPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <CreditCard className="h-4 w-4 text-gray-400 mr-2" />
-                        <span className="text-sm text-gray-900 capitalize">
-                          {request.withdrawal_method.replace("_", " ")}
-                        </span>
+                        <div>
+                          <div className="text-sm text-gray-900 capitalize">
+                            {request.withdrawal_method.replace("_", " ")}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {request.withdrawal_method === 'bank_transfer' && request.account_details.accountNumber && (
+                              <div>
+                                <div>Bank: {request.account_details.bankName}</div>
+                                <div>Account: {request.account_details.accountNumber}</div>
+                                <div>Name: {request.account_details.accountName}</div>
+                              </div>
+                            )}
+                            {request.withdrawal_method === 'crypto' && request.account_details.walletAddress && (
+                              <div>
+                                <div>Wallet: {request.account_details.walletAddress}</div>
+                              </div>
+                            )}
+                            {request.withdrawal_method === 'paypal' && request.account_details.paypalId && (
+                              <div>
+                                <div>PayPal: {request.account_details.paypalId}</div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

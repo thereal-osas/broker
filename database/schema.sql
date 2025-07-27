@@ -55,7 +55,7 @@ CREATE TABLE user_investments (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     plan_id UUID NOT NULL REFERENCES investment_plans(id),
     amount DECIMAL(15,2) NOT NULL,
-    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'cancelled', 'completed')),
+    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'cancelled', 'completed', 'suspended', 'deactivated')),
     start_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     end_date TIMESTAMP,
     total_profit DECIMAL(15,2) DEFAULT 0.00,
@@ -81,6 +81,7 @@ CREATE TABLE deposit_requests (
     amount DECIMAL(15,2) NOT NULL,
     payment_method VARCHAR(50),
     payment_proof TEXT, -- URL or file path
+    payment_proof_image TEXT, -- URL or file path for uploaded image
     status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'declined')),
     admin_notes TEXT,
     processed_by UUID REFERENCES users(id),
@@ -123,9 +124,12 @@ CREATE TABLE referrals (
     referrer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     referred_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     commission_rate DECIMAL(5,4) DEFAULT 0.0500, -- 5% default
+    commission_earned DECIMAL(15,2) DEFAULT 0.00,
+    commission_paid BOOLEAN DEFAULT false,
     total_commission DECIMAL(15,2) DEFAULT 0.00,
-    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'pending', 'approved')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(referrer_id, referred_id)
 );
 
@@ -143,6 +147,7 @@ CREATE TABLE newsletters (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title VARCHAR(200) NOT NULL,
     content TEXT NOT NULL,
+    image_url TEXT, -- URL for uploaded newsletter image
     author_id UUID NOT NULL REFERENCES users(id),
     is_published BOOLEAN DEFAULT false,
     published_at TIMESTAMP,
