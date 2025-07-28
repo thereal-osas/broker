@@ -153,9 +153,15 @@ export default function AdminInvestmentsPage() {
         const data = await response.json();
         setUserInvestments(data);
         return data;
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error("Failed to fetch user investments:", errorData);
+        toast.error("Failed to fetch user investments");
+        return [];
       }
     } catch (error) {
       console.error("Error fetching user investments:", error);
+      toast.error("Error loading user investments");
       return [];
     }
   }, []);
@@ -299,10 +305,25 @@ export default function AdminInvestmentsPage() {
       });
 
       if (response.ok) {
+        const responseData = await response.json();
+        console.log("Investment update successful:", responseData);
+
+        // Update the local state immediately for better UX
+        setUserInvestments(prev =>
+          prev.map(inv =>
+            inv.id === investment.id
+              ? { ...inv, status: newStatus }
+              : inv
+          )
+        );
+
         toast.success(`Investment ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`);
-        fetchUserInvestments();
+
+        // Refresh data to ensure consistency
+        await fetchUserInvestments();
       } else {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error("Investment update failed:", errorData);
         toast.error(errorData.error || "Failed to update investment status");
       }
     } catch (error) {

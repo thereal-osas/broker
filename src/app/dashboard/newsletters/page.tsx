@@ -18,6 +18,7 @@ interface Newsletter {
   id: string;
   title: string;
   content: string;
+  image_url?: string;
   author_name: string;
   published_at: string;
   created_at: string;
@@ -121,6 +122,25 @@ export default function NewslettersPage() {
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-xl shadow-lg p-8"
           >
+            {/* Newsletter Image */}
+            {selectedNewsletter.image_url && (
+              <div className="mb-8">
+                {selectedNewsletter.image_url.startsWith('data:') ? (
+                  <img
+                    src={selectedNewsletter.image_url}
+                    alt={selectedNewsletter.title}
+                    className="w-full max-w-2xl mx-auto rounded-lg shadow-md"
+                  />
+                ) : (
+                  <img
+                    src={selectedNewsletter.image_url}
+                    alt={selectedNewsletter.title}
+                    className="w-full max-w-2xl mx-auto rounded-lg shadow-md"
+                  />
+                )}
+              </div>
+            )}
+
             <div className="prose prose-lg max-w-none">
               <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
                 {selectedNewsletter.content}
@@ -182,7 +202,7 @@ export default function NewslettersPage() {
                       <h3 className="text-xl font-semibold text-gray-900 mb-2 hover:text-blue-600 transition-colors">
                         {newsletter.title}
                       </h3>
-                      
+
                       <div className="flex items-center space-x-4 text-sm text-gray-600 mb-4">
                         <div className="flex items-center">
                           <User className="w-4 h-4 mr-1" />
@@ -198,14 +218,25 @@ export default function NewslettersPage() {
                         </div>
                       </div>
 
+                      {/* Newsletter Image Preview */}
+                      {newsletter.image_url && (
+                        <div className="mb-4">
+                          <img
+                            src={newsletter.image_url}
+                            alt={newsletter.title}
+                            className="w-full max-w-md h-32 object-cover rounded-lg"
+                          />
+                        </div>
+                      )}
+
                       <p className="text-gray-700 line-clamp-3">
-                        {newsletter.content.length > 200 
+                        {newsletter.content.length > 200
                           ? `${newsletter.content.substring(0, 200)}...`
                           : newsletter.content
                         }
                       </p>
                     </div>
-                    
+
                     <div className="ml-6 flex-shrink-0">
                       <div className="flex items-center justify-center w-10 h-10 bg-blue-50 rounded-full group-hover:bg-blue-100 transition-colors">
                         <ChevronRight className="w-5 h-5 text-blue-600" />

@@ -82,26 +82,28 @@ export async function PUT(
 
     const result = await db.query(updateQuery, values);
 
-    // Log admin action
-    await db.query(`
-      INSERT INTO admin_actions (
-        admin_id, action_type, target_type, target_id, 
-        details, created_at
-      ) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
-    `, [
-      session.user.id,
-      'investment_status_change',
-      'user_investment',
-      id,
-      JSON.stringify({
-        old_status: investment.status,
-        new_status: status,
-        user_email: investment.user_email,
-        plan_name: investment.plan_name,
-        amount: investment.amount,
-        admin_notes: adminNotes || null
-      })
-    ]);
+    // Log admin action (commented out until admin_actions table is created)
+    // await db.query(`
+    //   INSERT INTO admin_actions (
+    //     admin_id, action_type, target_type, target_id,
+    //     details, created_at
+    //   ) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+    // `, [
+    //   session.user.id,
+    //   'investment_status_change',
+    //   'user_investment',
+    //   id,
+    //   JSON.stringify({
+    //     old_status: investment.status,
+    //     new_status: status,
+    //     user_email: investment.user_email,
+    //     plan_name: investment.plan_name,
+    //     amount: investment.amount,
+    //     admin_notes: adminNotes || null
+    //   })
+    // ]);
+
+    console.log(`Admin ${session.user.id} changed investment ${id} status from ${investment.status} to ${status}`);
 
     return NextResponse.json({
       message: "Investment updated successfully",
@@ -227,27 +229,29 @@ export async function DELETE(
     const deleteQuery = "DELETE FROM user_investments WHERE id = $1 RETURNING *";
     const result = await db.query(deleteQuery, [id]);
 
-    // Log admin action
-    await db.query(`
-      INSERT INTO admin_actions (
-        admin_id, action_type, target_type, target_id, 
-        details, created_at
-      ) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
-    `, [
-      session.user.id,
-      'investment_deletion',
-      'user_investment',
-      id,
-      JSON.stringify({
-        user_email: investment.user_email,
-        plan_name: investment.plan_name,
-        amount: investment.amount,
-        status: investment.status,
-        total_profit: investment.total_profit
-      })
-    ]);
+    // Log admin action (commented out until admin_actions table is created)
+    // await db.query(`
+    //   INSERT INTO admin_actions (
+    //     admin_id, action_type, target_type, target_id,
+    //     details, created_at
+    //   ) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+    // `, [
+    //   session.user.id,
+    //   'investment_deletion',
+    //   'user_investment',
+    //   id,
+    //   JSON.stringify({
+    //     user_email: investment.user_email,
+    //     plan_name: investment.plan_name,
+    //     amount: investment.amount,
+    //     status: investment.status,
+    //     total_profit: investment.total_profit
+    //   })
+    // ]);
 
-    return NextResponse.json({ 
+    console.log(`Admin ${session.user.id} deleted investment ${id} for user ${investment.user_email}`);
+
+    return NextResponse.json({
       message: "Investment deleted successfully",
       deleted_investment: result.rows[0]
     });

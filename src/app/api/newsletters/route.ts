@@ -16,10 +16,11 @@ export async function GET() {
 
     // Get only published newsletters for users
     const query = `
-      SELECT 
+      SELECT
         n.id,
         n.title,
         n.content,
+        n.image_url,
         n.published_at,
         n.created_at,
         u.first_name || ' ' || u.last_name as author_name
