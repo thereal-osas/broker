@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import {
   Copy,
   Clock,
@@ -360,9 +361,11 @@ export default function DepositPage() {
                 />
                 {imagePreview && (
                   <div className="mt-2">
-                    <img
+                    <Image
                       src={imagePreview}
                       alt="Payment proof preview"
+                      width={300}
+                      height={128}
                       className="max-w-xs h-32 object-cover rounded-lg"
                     />
                   </div>

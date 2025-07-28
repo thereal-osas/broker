@@ -4,17 +4,16 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Share2, 
-  Copy, 
-  Users, 
-  DollarSign, 
+import {
+  Share2,
+  Copy,
+  Users,
+  DollarSign,
   Gift,
   ExternalLink,
   Check,
   User,
-  Calendar,
-  TrendingUp
+  Calendar
 } from 'lucide-react';
 
 interface ReferralData {

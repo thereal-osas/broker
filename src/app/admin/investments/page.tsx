@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   TrendingUp,
@@ -18,7 +18,6 @@ import {
   CheckCircle,
   RefreshCw,
   Trash2,
-  X,
 } from "lucide-react";
 import { useToast } from "../../../hooks/useToast";
 
@@ -108,36 +107,31 @@ export default function AdminInvestmentsPage() {
     is_active: true,
   });
 
-  useEffect(() => {
-    if (status === "loading") return;
+  // Filter investments function
+  const filterInvestments = useCallback(() => {
+    let filtered = userInvestments;
 
-    if (!session?.user || session.user.role !== "admin") {
-      router.push("/auth/signin");
-      return;
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(investment =>
+        investment.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        investment.user_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        investment.plan_name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
 
-    fetchAllData();
-  }, [session, status, router]);
+    // Status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(investment => investment.status === statusFilter);
+    }
 
-  // Filter investments when search term or filters change
-  useEffect(() => {
-    filterInvestments();
+    // Plan filter
+    if (planFilter !== 'all') {
+      filtered = filtered.filter(investment => investment.plan_id === planFilter);
+    }
+
+    setFilteredInvestments(filtered);
   }, [userInvestments, searchTerm, statusFilter, planFilter]);
-
-  const fetchAllData = async () => {
-    setIsLoading(true);
-    try {
-      await Promise.all([
-        fetchInvestmentPlans(),
-        fetchUserInvestments(),
-      ]);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      toast.error("Failed to fetch investment data");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const fetchInvestmentPlans = async () => {
     try {
@@ -165,6 +159,37 @@ export default function AdminInvestmentsPage() {
     }
   };
 
+  const fetchAllData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      await Promise.all([
+        fetchInvestmentPlans(),
+        fetchUserInvestments(),
+      ]);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast.error("Failed to fetch investment data");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchInvestmentPlans, fetchUserInvestments]);
+
+  useEffect(() => {
+    if (status === "loading") return;
+
+    if (!session?.user || session.user.role !== "admin") {
+      router.push("/auth/signin");
+      return;
+    }
+
+    fetchAllData();
+  }, [session, status, router, fetchAllData]);
+
+  // Filter investments when search term or filters change
+  useEffect(() => {
+    filterInvestments();
+  }, [filterInvestments]);
+
   const updateStats = (plansData: InvestmentPlan[], investmentsData: UserInvestment[]) => {
     const totalPlans = plansData.length;
     const activePlans = plansData.filter(p => p.is_active).length;
@@ -181,31 +206,6 @@ export default function AdminInvestmentsPage() {
       totalInvested,
       totalProfit,
     });
-  };
-
-  const filterInvestments = () => {
-    let filtered = userInvestments;
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(investment =>
-        investment.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        investment.user_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        investment.plan_name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(investment => investment.status === statusFilter);
-    }
-
-    // Plan filter
-    if (planFilter !== 'all') {
-      filtered = filtered.filter(investment => investment.plan_id === planFilter);
-    }
-
-    setFilteredInvestments(filtered);
   };
 
   const createPlan = async () => {

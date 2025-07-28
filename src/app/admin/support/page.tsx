@@ -2,8 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useState, useCallback } from "react";
 import {
   MessageSquare,
   Clock,
@@ -59,23 +58,7 @@ export default function AdminSupportPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
 
-  useEffect(() => {
-    if (status === "loading") return;
-    
-    if (!session?.user) {
-      router.push("/auth/signin");
-      return;
-    }
-
-    if (session.user.role !== "admin") {
-      router.push("/dashboard");
-      return;
-    }
-
-    fetchTickets();
-  }, [session, status, router]);
-
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async () => {
     try {
       let url = "/api/support/tickets?limit=50";
       if (statusFilter !== "all") {
@@ -93,7 +76,23 @@ export default function AdminSupportPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [statusFilter]);
+
+  useEffect(() => {
+    if (status === "loading") return;
+
+    if (!session?.user) {
+      router.push("/auth/signin");
+      return;
+    }
+
+    if (session.user.role !== "admin") {
+      router.push("/dashboard");
+      return;
+    }
+
+    fetchTickets();
+  }, [session, status, router, fetchTickets]);
 
   const fetchMessages = async (ticketId: string) => {
     try {

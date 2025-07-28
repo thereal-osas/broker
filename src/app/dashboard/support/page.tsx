@@ -2,8 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useState, useCallback } from "react";
 import {
   MessageSquare,
   Plus,
@@ -59,23 +58,7 @@ export default function SupportPage() {
     priority: "medium",
   });
 
-  useEffect(() => {
-    if (status === "loading") return;
-    
-    if (!session?.user) {
-      router.push("/auth/signin");
-      return;
-    }
-
-    if (session.user.role === "admin") {
-      router.push("/admin/support");
-      return;
-    }
-
-    fetchTickets();
-  }, [session, status, router]);
-
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async () => {
     try {
       const response = await fetch("/api/support/tickets");
       if (response.ok) {
@@ -88,7 +71,23 @@ export default function SupportPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (status === "loading") return;
+
+    if (!session?.user) {
+      router.push("/auth/signin");
+      return;
+    }
+
+    if (session.user.role === "admin") {
+      router.push("/admin/support");
+      return;
+    }
+
+    fetchTickets();
+  }, [session, status, router, fetchTickets]);
 
   const fetchMessages = async (ticketId: string) => {
     try {

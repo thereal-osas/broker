@@ -21,7 +21,14 @@ interface WithdrawalRequest {
   user_id: string;
   amount: number;
   withdrawal_method: string;
-  account_details: Record<string, unknown>;
+  account_details: {
+    bankName?: string;
+    accountNumber?: string;
+    accountName?: string;
+    routingNumber?: string;
+    walletAddress?: string;
+    paypalId?: string;
+  };
   status: "pending" | "approved" | "declined" | "processed";
   admin_notes: string | null;
   processed_by: string | null;

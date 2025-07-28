@@ -2,15 +2,13 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   Users,
   DollarSign,
   Edit,
   Check,
-  X,
-  Eye,
   TrendingUp,
 } from "lucide-react";
 import { useToast } from "../../../hooks/useToast";
@@ -46,23 +44,7 @@ export default function AdminReferralsPage() {
     adminNotes: "",
   });
 
-  useEffect(() => {
-    if (status === "loading") return;
-    
-    if (!session?.user) {
-      router.push("/auth/signin");
-      return;
-    }
-
-    if (session.user.role !== "admin") {
-      router.push("/dashboard");
-      return;
-    }
-
-    fetchReferrals();
-  }, [session, status, router]);
-
-  const fetchReferrals = async () => {
+  const fetchReferrals = useCallback(async () => {
     try {
       const response = await fetch("/api/admin/referrals");
       if (response.ok) {
@@ -75,7 +57,23 @@ export default function AdminReferralsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (status === "loading") return;
+
+    if (!session?.user) {
+      router.push("/auth/signin");
+      return;
+    }
+
+    if (session.user.role !== "admin") {
+      router.push("/dashboard");
+      return;
+    }
+
+    fetchReferrals();
+  }, [session, status, router, fetchReferrals]);
 
   const handleEditReferral = (referral: ReferralData) => {
     setSelectedReferral(referral);

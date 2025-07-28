@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   FileText,
@@ -341,9 +342,11 @@ export default function AdminNewsletterPage() {
                     />
                     {imagePreview && (
                       <div className="mt-2">
-                        <img
+                        <Image
                           src={imagePreview}
                           alt="Newsletter preview"
+                          width={300}
+                          height={128}
                           className="max-w-xs h-32 object-cover rounded-lg"
                         />
                       </div>
