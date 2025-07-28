@@ -78,20 +78,26 @@ export default function DepositPage() {
   };
 
   const uploadImage = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append('file', file);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
 
-    const response = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-    });
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to upload image');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.url;
+    } catch (error) {
+      console.error('Image upload error:', error);
+      throw error;
     }
-
-    const data = await response.json();
-    return data.url;
   };
 
   const cryptoOptions = [
@@ -361,13 +367,21 @@ export default function DepositPage() {
                 />
                 {imagePreview && (
                   <div className="mt-2">
-                    <Image
-                      src={imagePreview}
-                      alt="Payment proof preview"
-                      width={300}
-                      height={128}
-                      className="max-w-xs h-32 object-cover rounded-lg"
-                    />
+                    {imagePreview.startsWith('data:') ? (
+                      <img
+                        src={imagePreview}
+                        alt="Payment proof preview"
+                        className="max-w-xs h-32 object-cover rounded-lg"
+                      />
+                    ) : (
+                      <Image
+                        src={imagePreview}
+                        alt="Payment proof preview"
+                        width={300}
+                        height={128}
+                        className="max-w-xs h-32 object-cover rounded-lg"
+                      />
+                    )}
                   </div>
                 )}
               </div>

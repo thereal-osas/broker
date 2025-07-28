@@ -315,13 +315,21 @@ export default function AdminDeposits() {
                 {selectedDeposit.payment_proof_image && (
                   <div>
                     <p className="text-sm text-gray-600 mb-2">Payment Screenshot:</p>
-                    <Image
-                      src={selectedDeposit.payment_proof_image}
-                      alt="Payment proof"
-                      width={400}
-                      height={256}
-                      className="max-w-full h-64 object-contain rounded-lg border"
-                    />
+                    {selectedDeposit.payment_proof_image.startsWith('data:') ? (
+                      <img
+                        src={selectedDeposit.payment_proof_image}
+                        alt="Payment proof"
+                        className="max-w-full h-64 object-contain rounded-lg border"
+                      />
+                    ) : (
+                      <Image
+                        src={selectedDeposit.payment_proof_image}
+                        alt="Payment proof"
+                        width={400}
+                        height={256}
+                        className="max-w-full h-64 object-contain rounded-lg border"
+                      />
+                    )}
                   </div>
                 )}
                 {!selectedDeposit.payment_proof && !selectedDeposit.payment_proof_image && (

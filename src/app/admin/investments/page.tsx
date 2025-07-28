@@ -19,7 +19,7 @@ import {
   RefreshCw,
   Trash2,
 } from "lucide-react";
-import { useToast } from "../../../hooks/useToast";
+import toast from "react-hot-toast";
 
 interface InvestmentPlan {
   id: string;
@@ -66,7 +66,6 @@ interface InvestmentStats {
 export default function AdminInvestmentsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const toast = useToast();
   
   // State management
   const [plans, setPlans] = useState<InvestmentPlan[]>([]);
@@ -133,39 +132,42 @@ export default function AdminInvestmentsPage() {
     setFilteredInvestments(filtered);
   }, [userInvestments, searchTerm, statusFilter, planFilter]);
 
-  const fetchInvestmentPlans = async () => {
+  const fetchInvestmentPlans = useCallback(async () => {
     try {
       const response = await fetch("/api/admin/investment-plans?includeStats=true");
       if (response.ok) {
         const data = await response.json();
         setPlans(data);
-        updateStats(data, userInvestments);
+        return data;
       }
     } catch (error) {
       console.error("Error fetching investment plans:", error);
+      return [];
     }
-  };
+  }, []);
 
-  const fetchUserInvestments = async () => {
+  const fetchUserInvestments = useCallback(async () => {
     try {
       const response = await fetch("/api/admin/user-investments");
       if (response.ok) {
         const data = await response.json();
         setUserInvestments(data);
-        updateStats(plans, data);
+        return data;
       }
     } catch (error) {
       console.error("Error fetching user investments:", error);
+      return [];
     }
-  };
+  }, []);
 
   const fetchAllData = useCallback(async () => {
     setIsLoading(true);
     try {
-      await Promise.all([
+      const [plansData, investmentsData] = await Promise.all([
         fetchInvestmentPlans(),
         fetchUserInvestments(),
       ]);
+      updateStats(plansData || [], investmentsData || []);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Failed to fetch investment data");
