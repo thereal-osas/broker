@@ -84,6 +84,29 @@ export default function AdminUsers() {
     }
   };
 
+  const toggleEmailVerification = async (userId: string, emailVerified: boolean) => {
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ emailVerified: !emailVerified }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log(data.message);
+        fetchUsers();
+      } else {
+        const errorData = await response.json();
+        console.error("Error:", errorData.error);
+      }
+    } catch (error) {
+      console.error("Error updating email verification:", error);
+    }
+  };
+
   const filteredUsers = users.filter(
     (user) =>
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -266,6 +289,19 @@ export default function AdminUsers() {
                       ) : (
                         <UserCheck className="w-4 h-4" />
                       )}
+                    </button>
+                    <button
+                      onClick={() => toggleEmailVerification(user.id, user.email_verified)}
+                      className={`p-1 rounded ${
+                        user.email_verified
+                          ? "text-yellow-600 hover:text-yellow-900"
+                          : "text-blue-600 hover:text-blue-900"
+                      }`}
+                      title={
+                        user.email_verified ? "Mark as Unverified" : "Verify Email"
+                      }
+                    >
+                      <Mail className="w-4 h-4" />
                     </button>
                   </td>
                 </motion.tr>

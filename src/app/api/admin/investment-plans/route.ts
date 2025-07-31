@@ -67,6 +67,8 @@ export async function POST(request: NextRequest) {
       daily_profit_rate,
       duration_days,
       is_active = true,
+      plan_type = 'daily',
+      profit_interval = 'daily',
     } = body;
 
     // Validation
@@ -97,12 +99,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate plan type and profit interval
+    const validPlanTypes = ['daily', 'live_trade'];
+    const validProfitIntervals = ['daily', 'hourly'];
+
+    if (!validPlanTypes.includes(plan_type)) {
+      return NextResponse.json(
+        { error: "Invalid plan type. Must be 'daily' or 'live_trade'" },
+        { status: 400 }
+      );
+    }
+
+    if (!validProfitIntervals.includes(profit_interval)) {
+      return NextResponse.json(
+        { error: "Invalid profit interval. Must be 'daily' or 'hourly'" },
+        { status: 400 }
+      );
+    }
+
     const query = `
       INSERT INTO investment_plans (
-        name, description, min_amount, max_amount, 
-        daily_profit_rate, duration_days, is_active
+        name, description, min_amount, max_amount,
+        daily_profit_rate, duration_days, is_active,
+        plan_type, profit_interval
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `;
 
@@ -114,6 +135,8 @@ export async function POST(request: NextRequest) {
       daily_profit_rate,
       duration_days,
       is_active,
+      plan_type,
+      profit_interval,
     ];
 
     const result = await db.query(query, values);

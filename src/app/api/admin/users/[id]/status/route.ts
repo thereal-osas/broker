@@ -19,31 +19,76 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { isActive } = body;
+    const { isActive, emailVerified } = body;
     const userId = params.id;
 
-    if (typeof isActive !== "boolean") {
+    // Validate inputs
+    if (isActive !== undefined && typeof isActive !== "boolean") {
       return NextResponse.json(
-        { error: "Invalid status value" },
+        { error: "Invalid isActive value" },
         { status: 400 }
       );
     }
 
+    if (emailVerified !== undefined && typeof emailVerified !== "boolean") {
+      return NextResponse.json(
+        { error: "Invalid emailVerified value" },
+        { status: 400 }
+      );
+    }
+
+    if (isActive === undefined && emailVerified === undefined) {
+      return NextResponse.json(
+        { error: "No valid fields to update" },
+        { status: 400 }
+      );
+    }
+
+    // Build dynamic update query
+    const updateFields = [];
+    const values = [];
+    let paramCount = 1;
+
+    if (isActive !== undefined) {
+      updateFields.push(`is_active = $${paramCount}`);
+      values.push(isActive);
+      paramCount++;
+    }
+
+    if (emailVerified !== undefined) {
+      updateFields.push(`email_verified = $${paramCount}`);
+      values.push(emailVerified);
+      paramCount++;
+    }
+
+    // Always update timestamp
+    updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(userId);
+
     const query = `
-      UPDATE users 
-      SET is_active = $1, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $2 AND role = 'investor'
+      UPDATE users
+      SET ${updateFields.join(', ')}
+      WHERE id = $${paramCount} AND role = 'investor'
       RETURNING *
     `;
 
-    const result = await db.query(query, [isActive, userId]);
+    const result = await db.query(query, values);
 
     if (result.rows.length === 0) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // Build success message
+    const messages = [];
+    if (isActive !== undefined) {
+      messages.push(`${isActive ? "activated" : "deactivated"}`);
+    }
+    if (emailVerified !== undefined) {
+      messages.push(`email ${emailVerified ? "verified" : "unverified"}`);
+    }
+
     return NextResponse.json({
-      message: `User ${isActive ? "activated" : "deactivated"} successfully`,
+      message: `User ${messages.join(" and ")} successfully`,
       user: result.rows[0],
     });
   } catch (error) {
