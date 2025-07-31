@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../../../../lib/auth";
-import { db } from "../../../../../lib/db";
+import { authOptions } from "@/lib/auth";
+import { db } from "@/lib/db";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -14,32 +14,32 @@ export async function GET() {
       );
     }
 
-    const query = `
+    const { searchParams } = new URL(request.url);
+    const includeStats = searchParams.get("includeStats") === "true";
+
+    let query = `
       SELECT 
-        ip.*,
-        COUNT(ui.id) as active_investments,
-        COALESCE(SUM(ui.amount), 0) as total_invested
-      FROM investment_plans ip
-      LEFT JOIN user_investments ui ON ip.id = ui.plan_id AND ui.status = 'active'
-      GROUP BY ip.id
-      ORDER BY ip.created_at DESC
+        ltp.*,
+        COUNT(ult.id) as active_trades,
+        COALESCE(SUM(CASE WHEN ult.status = 'active' THEN ult.amount ELSE 0 END), 0) as total_invested
+      FROM live_trade_plans ltp
+      LEFT JOIN user_live_trades ult ON ltp.id = ult.live_trade_plan_id
+      GROUP BY ltp.id
+      ORDER BY ltp.created_at DESC
     `;
+
+    if (!includeStats) {
+      query = `
+        SELECT * FROM live_trade_plans 
+        ORDER BY created_at DESC
+      `;
+    }
 
     const result = await db.query(query);
 
-    const plans = result.rows.map((plan: Record<string, unknown>) => ({
-      ...plan,
-      min_amount: parseFloat(String(plan.min_amount || 0)),
-      max_amount: plan.max_amount ? parseFloat(String(plan.max_amount)) : null,
-      daily_profit_rate: parseFloat(String(plan.daily_profit_rate || 0)),
-      duration_days: parseInt(String(plan.duration_days || 0)),
-      active_investments: parseInt(String(plan.active_investments || 0)),
-      total_invested: parseFloat(String(plan.total_invested || 0)),
-    }));
-
-    return NextResponse.json(plans);
+    return NextResponse.json(result.rows);
   } catch (error) {
-    console.error("Admin investment plans fetch error:", error);
+    console.error("Error fetching live trade plans:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -64,8 +64,8 @@ export async function POST(request: NextRequest) {
       description,
       min_amount,
       max_amount,
-      daily_profit_rate,
-      duration_days,
+      hourly_profit_rate,
+      duration_hours,
       is_active = true,
     } = body;
 
@@ -74,8 +74,8 @@ export async function POST(request: NextRequest) {
       !name ||
       !description ||
       !min_amount ||
-      !daily_profit_rate ||
-      !duration_days
+      !hourly_profit_rate ||
+      !duration_hours
     ) {
       return NextResponse.json(
         { error: "Missing required fields" },
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (min_amount <= 0 || daily_profit_rate <= 0 || duration_days <= 0) {
+    if (min_amount <= 0 || hourly_profit_rate <= 0 || duration_hours <= 0) {
       return NextResponse.json(
         { error: "Invalid values for amount, rate, or duration" },
         { status: 400 }
@@ -97,12 +97,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-
-
     const query = `
-      INSERT INTO investment_plans (
-        name, description, min_amount, max_amount,
-        daily_profit_rate, duration_days, is_active
+      INSERT INTO live_trade_plans (
+        name, description, min_amount, max_amount, 
+        hourly_profit_rate, duration_hours, is_active
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
@@ -113,16 +111,19 @@ export async function POST(request: NextRequest) {
       description,
       min_amount,
       max_amount,
-      daily_profit_rate,
-      duration_days,
+      hourly_profit_rate / 100, // Convert percentage to decimal
+      duration_hours,
       is_active,
     ];
 
     const result = await db.query(query, values);
 
-    return NextResponse.json(result.rows[0], { status: 201 });
+    return NextResponse.json({
+      message: "Live trade plan created successfully",
+      plan: result.rows[0],
+    });
   } catch (error) {
-    console.error("Investment plan creation error:", error);
+    console.error("Error creating live trade plan:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

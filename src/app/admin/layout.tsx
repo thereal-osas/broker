@@ -18,12 +18,14 @@ import {
   Menu,
   X,
   DollarSign,
+  Activity,
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { name: "Users", href: "/admin/users", icon: Users },
   { name: "Investments", href: "/admin/investments", icon: TrendingUp },
+  { name: "Live Trade", href: "/admin/live-trade", icon: Activity },
   {
     name: "Profit Distribution",
     href: "/admin/profit-distribution",

@@ -8,97 +8,130 @@ const pool = new Pool({
 
 async function addLiveTradeSupport() {
   const client = await pool.connect();
-  
+
   try {
-    console.log('🚀 Adding Live Trade support to investment system...');
-    
-    // 1. Add plan_type column to investment_plans table
-    console.log('📝 Adding plan_type column to investment_plans...');
+    console.log('🚀 Adding standalone Live Trade system...');
+
+    // 1. Create live_trade_plans table (separate from investment_plans)
+    console.log('📝 Creating live_trade_plans table...');
     await client.query(`
-      ALTER TABLE investment_plans 
-      ADD COLUMN IF NOT EXISTS plan_type VARCHAR(20) DEFAULT 'daily' 
-      CHECK (plan_type IN ('daily', 'live_trade'))
-    `);
-    
-    // 2. Add profit_interval column to investment_plans table
-    console.log('📝 Adding profit_interval column to investment_plans...');
-    await client.query(`
-      ALTER TABLE investment_plans 
-      ADD COLUMN IF NOT EXISTS profit_interval VARCHAR(20) DEFAULT 'daily' 
-      CHECK (profit_interval IN ('daily', 'hourly'))
-    `);
-    
-    // 3. Update existing plans to be 'daily' type
-    console.log('📝 Updating existing plans to daily type...');
-    await client.query(`
-      UPDATE investment_plans 
-      SET plan_type = 'daily', profit_interval = 'daily' 
-      WHERE plan_type IS NULL OR profit_interval IS NULL
-    `);
-    
-    // 4. Create hourly profit calculations table
-    console.log('📝 Creating hourly_investment_profits table...');
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS hourly_investment_profits (
+      CREATE TABLE IF NOT EXISTS live_trade_plans (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        investment_id UUID NOT NULL REFERENCES user_investments(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        description TEXT NOT NULL,
+        min_amount DECIMAL(15,2) NOT NULL CHECK (min_amount > 0),
+        max_amount DECIMAL(15,2) CHECK (max_amount IS NULL OR max_amount >= min_amount),
+        hourly_profit_rate DECIMAL(5,4) NOT NULL CHECK (hourly_profit_rate > 0),
+        duration_hours INTEGER NOT NULL CHECK (duration_hours > 0),
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // 2. Create user_live_trades table (separate from user_investments)
+    console.log('📝 Creating user_live_trades table...');
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_live_trades (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        live_trade_plan_id UUID NOT NULL REFERENCES live_trade_plans(id) ON DELETE CASCADE,
+        amount DECIMAL(15,2) NOT NULL CHECK (amount > 0),
+        status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'completed', 'cancelled')),
+        total_profit DECIMAL(15,2) DEFAULT 0,
+        start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        end_time TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // 3. Create hourly_live_trade_profits table
+    console.log('📝 Creating hourly_live_trade_profits table...');
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS hourly_live_trade_profits (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        live_trade_id UUID NOT NULL REFERENCES user_live_trades(id) ON DELETE CASCADE,
         profit_amount DECIMAL(15,2) NOT NULL,
         profit_hour TIMESTAMP NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(investment_id, profit_hour)
+        UNIQUE(live_trade_id, profit_hour)
       )
     `);
-    
-    // 5. Add trigger for hourly profits table
-    console.log('📝 Adding trigger for hourly_investment_profits...');
+
+    // 4. Add triggers for updated_at columns
+    console.log('📝 Adding triggers for Live Trade tables...');
     await client.query(`
-      CREATE TRIGGER IF NOT EXISTS update_hourly_investment_profits_updated_at 
-      BEFORE UPDATE ON hourly_investment_profits 
+      CREATE TRIGGER IF NOT EXISTS update_live_trade_plans_updated_at
+      BEFORE UPDATE ON live_trade_plans
       FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()
     `);
-    
-    // 6. Create a sample Live Trade plan
-    console.log('📝 Creating sample Live Trade investment plan...');
-    const existingLiveTrade = await client.query(`
-      SELECT id FROM investment_plans WHERE plan_type = 'live_trade' LIMIT 1
+
+    await client.query(`
+      CREATE TRIGGER IF NOT EXISTS update_user_live_trades_updated_at
+      BEFORE UPDATE ON user_live_trades
+      FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()
     `);
-    
+
+    // 5. Create sample Live Trade plans
+    console.log('📝 Creating sample Live Trade plans...');
+    const existingLiveTrade = await client.query(`
+      SELECT id FROM live_trade_plans LIMIT 1
+    `);
+
     if (existingLiveTrade.rows.length === 0) {
       await client.query(`
-        INSERT INTO investment_plans (
-          name, description, min_amount, max_amount, 
-          daily_profit_rate, duration_days, is_active,
-          plan_type, profit_interval
-        ) VALUES (
+        INSERT INTO live_trade_plans (
+          name, description, min_amount, max_amount,
+          hourly_profit_rate, duration_hours, is_active
+        ) VALUES
+        (
+          'Live Trade Starter',
+          'Entry-level live trading with hourly profit calculations. Perfect for beginners who want to experience real-time trading.',
+          50.00,
+          1000.00,
+          0.15,
+          24,
+          true
+        ),
+        (
           'Live Trade Pro',
-          'Real-time trading with hourly profit calculations. Perfect for active traders who want to see immediate returns on their investments.',
-          100.00,
+          'Professional live trading with enhanced hourly returns. Designed for experienced traders seeking higher profits.',
+          500.00,
           10000.00,
-          2.5,
-          30,
-          true,
-          'live_trade',
-          'hourly'
+          0.25,
+          48,
+          true
+        ),
+        (
+          'Live Trade Elite',
+          'Premium live trading experience with maximum hourly profit potential. For elite traders with substantial capital.',
+          2000.00,
+          50000.00,
+          0.35,
+          72,
+          true
         )
       `);
-      console.log('✅ Created sample Live Trade plan');
+      console.log('✅ Created sample Live Trade plans');
     } else {
-      console.log('✅ Live Trade plan already exists');
+      console.log('✅ Live Trade plans already exist');
     }
     
-    console.log('🎉 Live Trade support added successfully!');
+    console.log('🎉 Standalone Live Trade system added successfully!');
     console.log('');
     console.log('📋 Summary of changes:');
-    console.log('   ✅ Added plan_type column to investment_plans');
-    console.log('   ✅ Added profit_interval column to investment_plans');
-    console.log('   ✅ Created hourly_investment_profits table');
-    console.log('   ✅ Updated existing plans to daily type');
-    console.log('   ✅ Created sample Live Trade plan');
+    console.log('   ✅ Created live_trade_plans table (separate from investment_plans)');
+    console.log('   ✅ Created user_live_trades table (separate from user_investments)');
+    console.log('   ✅ Created hourly_live_trade_profits table');
+    console.log('   ✅ Added triggers for updated_at columns');
+    console.log('   ✅ Created sample Live Trade plans');
     console.log('');
     console.log('🔧 Next steps:');
-    console.log('   1. Update admin interface to support Live Trade plans');
-    console.log('   2. Update user dashboard to show hourly profits');
-    console.log('   3. Update profit calculation cron jobs');
+    console.log('   1. Create admin interface at /admin/live-trade');
+    console.log('   2. Create user dashboard section for Live Trade');
+    console.log('   3. Create API endpoints for Live Trade management');
+    console.log('   4. Add Live Trade to admin navigation');
     
   } catch (error) {
     console.error('❌ Error adding Live Trade support:', error);

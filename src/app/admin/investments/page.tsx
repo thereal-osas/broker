@@ -30,8 +30,6 @@ interface InvestmentPlan {
   daily_profit_rate: number;
   duration_days: number;
   is_active: boolean;
-  plan_type?: string;
-  profit_interval?: string;
   created_at: string;
   updated_at?: string;
   active_investments?: number;
@@ -106,8 +104,6 @@ export default function AdminInvestmentsPage() {
     daily_profit_rate: 0,
     duration_days: 0,
     is_active: true,
-    plan_type: 'daily',
-    profit_interval: 'daily',
   });
 
   // Filter investments function
@@ -418,8 +414,6 @@ export default function AdminInvestmentsPage() {
       daily_profit_rate: 0,
       duration_days: 0,
       is_active: true,
-      plan_type: 'daily',
-      profit_interval: 'daily',
     });
   };
 
@@ -433,8 +427,6 @@ export default function AdminInvestmentsPage() {
       daily_profit_rate: plan.daily_profit_rate * 100, // Convert to percentage
       duration_days: plan.duration_days,
       is_active: plan.is_active,
-      plan_type: plan.plan_type || 'daily',
-      profit_interval: plan.profit_interval || 'daily',
     });
     setShowEditModal(true);
   };
@@ -566,23 +558,7 @@ export default function AdminInvestmentsPage() {
                 className="bg-white rounded-lg shadow-lg p-6"
               >
                 <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{plan.name}</h3>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <span
-                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                          plan.plan_type === 'live_trade'
-                            ? 'bg-purple-100 text-purple-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}
-                      >
-                        {plan.plan_type === 'live_trade' ? 'Live Trade' : 'Daily Investment'}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {plan.profit_interval === 'hourly' ? 'Hourly Profits' : 'Daily Profits'}
-                      </span>
-                    </div>
-                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">{plan.name}</h3>
                   <span
                     className={`px-2 py-1 text-xs font-semibold rounded-full ${
                       plan.is_active
@@ -970,44 +946,6 @@ export default function AdminInvestmentsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Plan Type *
-                  </label>
-                  <select
-                    value={planForm.plan_type}
-                    onChange={(e) => {
-                      const planType = e.target.value;
-                      setPlanForm(prev => ({
-                        ...prev,
-                        plan_type: planType,
-                        profit_interval: planType === 'live_trade' ? 'hourly' : 'daily'
-                      }));
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="daily">Daily Investment</option>
-                    <option value="live_trade">Live Trade</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Profit Interval *
-                  </label>
-                  <select
-                    value={planForm.profit_interval}
-                    onChange={(e) => setPlanForm(prev => ({ ...prev, profit_interval: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    disabled={planForm.plan_type === 'live_trade'}
-                  >
-                    <option value="daily">Daily</option>
-                    <option value="hourly">Hourly</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Min Amount ($) *
                   </label>
                   <input
@@ -1130,44 +1068,6 @@ export default function AdminInvestmentsPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={3}
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Plan Type *
-                  </label>
-                  <select
-                    value={planForm.plan_type}
-                    onChange={(e) => {
-                      const planType = e.target.value;
-                      setPlanForm(prev => ({
-                        ...prev,
-                        plan_type: planType,
-                        profit_interval: planType === 'live_trade' ? 'hourly' : 'daily'
-                      }));
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="daily">Daily Investment</option>
-                    <option value="live_trade">Live Trade</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Profit Interval *
-                  </label>
-                  <select
-                    value={planForm.profit_interval}
-                    onChange={(e) => setPlanForm(prev => ({ ...prev, profit_interval: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    disabled={planForm.plan_type === 'live_trade'}
-                  >
-                    <option value="daily">Daily</option>
-                    <option value="hourly">Hourly</option>
-                  </select>
-                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
