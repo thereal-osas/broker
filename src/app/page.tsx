@@ -64,12 +64,7 @@ export default function Home() {
     },
   ];
 
-  const stats = [
-    { label: "Active Investors", value: "10,000+" },
-    { label: "Total Invested", value: "$50M+" },
-    { label: "Average ROI", value: "15%" },
-    { label: "Countries", value: "50+" },
-  ];
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -149,29 +144,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Stats Section */}
-      <div className="px-6 py-16 bg-black/20">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="text-center"
-              >
-                <div className="text-3xl md:text-4xl font-bold text-orange-500 mb-2">
-                  {stat.value}
-                </div>
-                <div className="text-gray-400 text-sm md:text-base">
-                  {stat.label}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </div>
+
 
       {/* Features Section */}
       <div className="px-6 py-20">

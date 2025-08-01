@@ -59,6 +59,7 @@ export default function BalanceCards({ balance }: BalanceCardsProps) {
       bgColor: "bg-red-50",
       iconColor: "text-red-600",
       description: "Your credit rating",
+      isPoints: true, // Flag to indicate this is a points system
     },
   ];
 
@@ -81,11 +82,11 @@ export default function BalanceCards({ balance }: BalanceCardsProps) {
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-gray-900">
-                  $
+                  {item.isPoints ? "CRD " : "$"}
                   {(typeof item.amount === "number"
                     ? item.amount
                     : parseFloat(item.amount || 0)
-                  ).toFixed(2)}
+                  ).toFixed(item.isPoints ? 0 : 2)}
                 </p>
               </div>
             </div>

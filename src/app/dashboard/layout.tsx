@@ -18,11 +18,13 @@ import {
   X,
   Mail,
   MessageSquare,
+  Activity,
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Investments", href: "/dashboard/investments", icon: TrendingUp },
+  { name: "Live Trade", href: "/dashboard/live-trade", icon: Activity },
   { name: "Deposit", href: "/dashboard/deposit", icon: CreditCard },
   { name: "Withdraw", href: "/dashboard/withdraw", icon: ArrowDownRight },
   { name: "Transactions", href: "/dashboard/transactions", icon: History },

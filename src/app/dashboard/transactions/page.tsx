@@ -48,9 +48,9 @@ export default function TransactionsPage() {
   const getTransactionDisplayLabel = (type: string) => {
     switch (type) {
       case "admin_funding":
-        return "Deposit";
+        return "Deposit Alert";
       case "admin_deduction":
-        return "Alert";
+        return "Debit Alert";
       case "referral_commission":
         return "Referral Commission";
       default:

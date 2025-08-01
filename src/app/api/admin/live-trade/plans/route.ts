@@ -124,8 +124,17 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error creating live trade plan:", error);
+
+    // Check if it's a table doesn't exist error
+    if (error instanceof Error && error.message.includes('relation "live_trade_plans" does not exist')) {
+      return NextResponse.json(
+        { error: "Live trade tables not found. Please run the database migration script first." },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: `Internal server error: ${error instanceof Error ? error.message : 'Unknown error'}` },
       { status: 500 }
     );
   }

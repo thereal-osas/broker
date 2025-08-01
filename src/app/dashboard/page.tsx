@@ -5,10 +5,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useBalance } from "../../hooks/useBalance";
-import { useInvestments } from "../../hooks/useInvestments";
-import { useToast } from "../../hooks/useToast";
+
 import BalanceCards from "../../components/user/BalanceCards";
-import InvestmentPlans from "../../components/investments/InvestmentPlans";
+
 import UserInvestments from "../../components/investments/UserInvestments";
 import ProfitHistory from "../../components/dashboard/ProfitHistory";
 
@@ -16,8 +15,6 @@ export default function UserDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const { balance, isLoading: balanceLoading, refreshBalance } = useBalance();
-  const { createInvestment } = useInvestments();
-  const toast = useToast();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
@@ -33,19 +30,6 @@ export default function UserDashboard() {
       return;
     }
   }, [session, status, router]);
-
-  const handleInvestment = async (planId: string, amount: number) => {
-    try {
-      await createInvestment(planId, amount);
-      refreshBalance();
-      setRefreshTrigger((prev) => prev + 1);
-      toast.success("Investment created successfully!");
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create investment"
-      );
-    }
-  };
 
   if (status === "loading" || balanceLoading) {
     return (
@@ -103,21 +87,7 @@ export default function UserDashboard() {
           {balance && <BalanceCards balance={balance} />}
         </motion.div>
 
-        {/* Investment Plans */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="mb-8"
-        >
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">
-            Investment Plans
-          </h2>
-          <InvestmentPlans
-            onInvest={handleInvestment}
-            userBalance={balance?.total_balance || 0}
-          />
-        </motion.div>
+
 
         {/* User Investments */}
         <motion.div

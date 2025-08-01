@@ -108,7 +108,7 @@ export default function AdminSettingsPage() {
   const settingCategories = [
     {
       title: 'Platform Settings',
-      keys: ['platform_name', 'support_email', 'support_whatsapp']
+      keys: ['platform_name', 'support_whatsapp']
     },
     {
       title: 'Financial Settings',

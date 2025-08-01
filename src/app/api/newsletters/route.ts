@@ -23,7 +23,7 @@ export async function GET() {
         n.image_url,
         n.published_at,
         n.created_at,
-        u.first_name || ' ' || u.last_name as author_name
+        'Manager' as author_name
       FROM newsletters n
       JOIN users u ON n.author_id = u.id
       WHERE n.is_published = true

@@ -13,6 +13,8 @@ import {
   User,
   Calendar,
   CreditCard,
+  Eye,
+  XCircle,
 } from "lucide-react";
 import { useToast } from "../../../hooks/useToast";
 
@@ -45,6 +47,8 @@ export default function AdminWithdrawalsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<WithdrawalRequest | null>(null);
+  const [adminNotes, setAdminNotes] = useState("");
   const toast = useToast();
 
   useEffect(() => {
@@ -92,6 +96,8 @@ export default function AdminWithdrawalsPage() {
 
       if (response.ok) {
         fetchWithdrawalRequests();
+        setSelectedRequest(null);
+        setAdminNotes("");
         toast.success(`Withdrawal request ${newStatus} successfully!`);
       } else {
         const errorData = await response.json();
@@ -327,28 +333,13 @@ export default function AdminWithdrawalsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
 
-                      {request.status === "pending" && (
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() =>
-                              handleStatusUpdate(request.id, "approved")
-                            }
-                            className="text-green-600 hover:text-green-900"
-                            disabled={isProcessing}
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() =>
-                              handleStatusUpdate(request.id, "declined")
-                            }
-                            className="text-red-600 hover:text-red-900"
-                            disabled={isProcessing}
-                          >
-                            Decline
-                          </button>
-                        </div>
-                      )}
+                      <button
+                        onClick={() => setSelectedRequest(request)}
+                        className="text-blue-600 hover:text-blue-900 p-1 rounded"
+                        title="View Details"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -371,6 +362,177 @@ export default function AdminWithdrawalsPage() {
           )}
         </motion.div>
       </div>
+
+      {/* Withdrawal Details Modal */}
+      {selectedRequest && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedRequest(null)}
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">
+                Withdrawal Request Details
+              </h3>
+              <button
+                onClick={() => setSelectedRequest(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    User
+                  </label>
+                  <p className="text-sm text-gray-900">
+                    {selectedRequest.user_name}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {selectedRequest.user_email}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Amount
+                  </label>
+                  <p className="text-lg font-semibold text-gray-900">
+                    ${selectedRequest.amount.toFixed(2)}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Withdrawal Method
+                  </label>
+                  <p className="text-sm text-gray-900 capitalize">
+                    {selectedRequest.withdrawal_method.replace("_", " ")}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Status
+                  </label>
+                  <span
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                      selectedRequest.status
+                    )}`}
+                  >
+                    {selectedRequest.status}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Account Details
+                </label>
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  {selectedRequest.account_details.bankName && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">Bank Name:</span>
+                      <span className="text-sm text-gray-900">{selectedRequest.account_details.bankName}</span>
+                    </div>
+                  )}
+                  {selectedRequest.account_details.accountNumber && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">Account Number:</span>
+                      <span className="text-sm text-gray-900">{selectedRequest.account_details.accountNumber}</span>
+                    </div>
+                  )}
+                  {selectedRequest.account_details.accountName && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">Account Name:</span>
+                      <span className="text-sm text-gray-900">{selectedRequest.account_details.accountName}</span>
+                    </div>
+                  )}
+                  {selectedRequest.account_details.routingNumber && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">Routing Number:</span>
+                      <span className="text-sm text-gray-900">{selectedRequest.account_details.routingNumber}</span>
+                    </div>
+                  )}
+                  {selectedRequest.account_details.walletAddress && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">Wallet Address:</span>
+                      <span className="text-sm text-gray-900 break-all">{selectedRequest.account_details.walletAddress}</span>
+                    </div>
+                  )}
+                  {selectedRequest.account_details.paypalId && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">PayPal ID:</span>
+                      <span className="text-sm text-gray-900">{selectedRequest.account_details.paypalId}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {selectedRequest.admin_notes && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Admin Notes
+                  </label>
+                  <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-lg">
+                    {selectedRequest.admin_notes}
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Request Date
+                </label>
+                <p className="text-sm text-gray-900">
+                  {new Date(selectedRequest.created_at).toLocaleString()}
+                </p>
+              </div>
+            </div>
+
+            {selectedRequest.status === "pending" && (
+              <div className="space-y-4 mt-6 pt-6 border-t">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Admin Notes (Optional)
+                  </label>
+                  <textarea
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={3}
+                    placeholder="Add notes about this withdrawal request..."
+                  />
+                </div>
+
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => handleStatusUpdate(selectedRequest.id, "approved", adminNotes)}
+                    disabled={isProcessing}
+                    className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                  >
+                    {isProcessing ? "Processing..." : "Approve Withdrawal"}
+                  </button>
+                  <button
+                    onClick={() => handleStatusUpdate(selectedRequest.id, "declined", adminNotes)}
+                    disabled={isProcessing}
+                    className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                  >
+                    {isProcessing ? "Processing..." : "Decline Withdrawal"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 }
