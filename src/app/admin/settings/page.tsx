@@ -106,10 +106,10 @@ export default function AdminSettingsPage() {
   };
 
   const settingCategories = [
-    {
-      title: 'Platform Settings',
-      keys: ['platform_name', 'support_whatsapp']
-    },
+    // {
+    //   title: 'Platform Settings',
+    //   keys: ['platform_name', 'support_whatsapp']
+    // },
     {
       title: 'Financial Settings',
       keys: ['default_referral_commission', 'min_withdrawal_amount', 'max_withdrawal_amount']

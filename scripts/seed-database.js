@@ -227,11 +227,6 @@ class DatabaseSeeder {
           description: 'Default referral commission rate (5%)'
         },
         {
-          key: 'support_email',
-          value: 'support@credcrypto.com',
-          description: 'Support contact email'
-        },
-        {
           key: 'company_address',
           value: 'CredCrypto Investment Platform',
           description: 'Company address for legal documents'
