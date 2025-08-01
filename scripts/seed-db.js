@@ -193,11 +193,7 @@ async function seedDatabase() {
         value: "50000.00",
         description: "Maximum withdrawal amount per request",
       },
-      {
-        key: "support_email",
-        value: "support@credcrypto.com",
-        description: "Support email address",
-      },
+
       {
         key: "support_whatsapp",
         value: "+1234567890",

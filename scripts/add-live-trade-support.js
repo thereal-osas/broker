@@ -61,17 +61,29 @@ async function addLiveTradeSupport() {
 
     // 4. Add triggers for updated_at columns
     console.log('📝 Adding triggers for Live Trade tables...');
-    await client.query(`
-      CREATE TRIGGER IF NOT EXISTS update_live_trade_plans_updated_at
-      BEFORE UPDATE ON live_trade_plans
-      FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()
-    `);
 
-    await client.query(`
-      CREATE TRIGGER IF NOT EXISTS update_user_live_trades_updated_at
-      BEFORE UPDATE ON user_live_trades
-      FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()
-    `);
+    // Drop triggers if they exist, then create them
+    try {
+      await client.query(`DROP TRIGGER IF EXISTS update_live_trade_plans_updated_at ON live_trade_plans`);
+      await client.query(`
+        CREATE TRIGGER update_live_trade_plans_updated_at
+        BEFORE UPDATE ON live_trade_plans
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()
+      `);
+    } catch (error) {
+      console.log('Note: Trigger creation for live_trade_plans may have failed, but continuing...');
+    }
+
+    try {
+      await client.query(`DROP TRIGGER IF EXISTS update_user_live_trades_updated_at ON user_live_trades`);
+      await client.query(`
+        CREATE TRIGGER update_user_live_trades_updated_at
+        BEFORE UPDATE ON user_live_trades
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()
+      `);
+    } catch (error) {
+      console.log('Note: Trigger creation for user_live_trades may have failed, but continuing...');
+    }
 
     // 5. Create sample Live Trade plans
     console.log('📝 Creating sample Live Trade plans...');
