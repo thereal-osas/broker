@@ -112,7 +112,7 @@ export default function AdminSettingsPage() {
     },
     {
       title: 'Financial Settings',
-      keys: ['default_referral_commission', 'min_withdrawal_amount', 'max_withdrawal_amount']
+      keys: ['default_referral_commission', 'min_withdrawal_amount', 'max_withdrawal_amount', 'max_withdrawal_percentage']
     }
   ];
 

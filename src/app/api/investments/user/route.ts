@@ -93,8 +93,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create investment and update balances in a transaction
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const result = await db.transaction(async (_client) => {
+    const result = await db.transaction(async (client) => {
       // Create investment
       const investment = await investmentQueries.createInvestment({
         userId: session.user.id,
@@ -123,20 +122,19 @@ export async function POST(request: NextRequest) {
 
       // Check if user was referred and calculate commission
       const referralQuery = `
-        SELECT r.*, s.default_referral_commission
+        SELECT r.*
         FROM referrals r
-        CROSS JOIN settings s
         WHERE r.referred_id = $1 AND r.status = 'active'
       `;
-      const referralResult = await db.query(referralQuery, [session.user.id]);
+      const referralResult = await client.query(referralQuery, [session.user.id]);
 
       if (referralResult.rows.length > 0) {
         const referral = referralResult.rows[0];
-        const commissionRate = parseFloat(referral.commission_rate || referral.default_referral_commission || 0.05);
+        const commissionRate = parseFloat(referral.commission_rate || 0.05); // Default 5%
         const commissionAmount = amount * commissionRate;
 
         // Update referral commission
-        await db.query(`
+        await client.query(`
           UPDATE referrals
           SET commission_earned = commission_earned + $1,
               total_commission = total_commission + $1

@@ -34,16 +34,35 @@ export default function WithdrawPage() {
     routingNumber: "",
     walletAddress: "",
     paypalId: "",
+    cryptoType: "bitcoin", // Default crypto type
   });
   const [isLoading, setIsLoading] = useState(false);
   const [withdrawalRequests, setWithdrawalRequests] = useState<
     WithdrawalRequest[]
   >([]);
   const [showForm, setShowForm] = useState(true);
+  const [platformSettings, setPlatformSettings] = useState({
+    max_withdrawal_percentage: '100',
+    min_withdrawal_amount: '50',
+    max_withdrawal_amount: '50000'
+  });
 
   useEffect(() => {
     fetchWithdrawalRequests();
+    fetchPlatformSettings();
   }, []);
+
+  const fetchPlatformSettings = async () => {
+    try {
+      const response = await fetch("/api/platform-settings");
+      if (response.ok) {
+        const settings = await response.json();
+        setPlatformSettings(settings);
+      }
+    } catch (error) {
+      console.error("Error fetching platform settings:", error);
+    }
+  };
 
   const fetchWithdrawalRequests = async () => {
     try {
@@ -83,6 +102,7 @@ export default function WithdrawPage() {
           routingNumber: "",
           walletAddress: "",
           paypalId: "",
+          cryptoType: "bitcoin",
         });
         setShowForm(false);
         fetchWithdrawalRequests();
@@ -129,7 +149,11 @@ export default function WithdrawPage() {
   };
 
   const availableBalance = balance?.total_balance || 0;
-  const maxWithdrawal = Math.min(availableBalance, 50000); // Max $50k per request
+  const maxWithdrawalPercentage = parseFloat(platformSettings.max_withdrawal_percentage) / 100;
+  const maxWithdrawalAmount = parseFloat(platformSettings.max_withdrawal_amount);
+  const percentageBasedMax = availableBalance * maxWithdrawalPercentage;
+  const maxWithdrawal = Math.min(availableBalance, maxWithdrawalAmount, percentageBasedMax);
+  const minWithdrawal = parseFloat(platformSettings.min_withdrawal_amount);
 
   return (
     <div className="p-6">
@@ -170,7 +194,7 @@ export default function WithdrawPage() {
                 <input
                   type="number"
                   step="0.01"
-                  min="50"
+                  min={minWithdrawal}
                   max={maxWithdrawal}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
@@ -179,7 +203,7 @@ export default function WithdrawPage() {
                   placeholder="Enter amount to withdraw"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Min: $50.00 | Max: ${maxWithdrawal.toFixed(2)}
+                  Min: ${minWithdrawal.toFixed(2)} | Max: ${maxWithdrawal.toFixed(2)} ({(maxWithdrawalPercentage * 100).toFixed(0)}% of balance)
                 </p>
               </div>
 
@@ -279,7 +303,34 @@ export default function WithdrawPage() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Cryptocurrency Wallet Address
+                      Cryptocurrency Type
+                    </label>
+                    <select
+                      value={accountDetails.cryptoType}
+                      onChange={(e) =>
+                        setAccountDetails((prev) => ({
+                          ...prev,
+                          cryptoType: e.target.value,
+                        }))
+                      }
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="bitcoin">Bitcoin (BTC)</option>
+                      <option value="ethereum">Ethereum (ETH)</option>
+                      <option value="usdt">Tether (USDT)</option>
+                      <option value="usdc">USD Coin (USDC)</option>
+                      <option value="bnb">Binance Coin (BNB)</option>
+                      <option value="cardano">Cardano (ADA)</option>
+                      <option value="solana">Solana (SOL)</option>
+                      <option value="dogecoin">Dogecoin (DOGE)</option>
+                      <option value="litecoin">Litecoin (LTC)</option>
+                      <option value="polygon">Polygon (MATIC)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {accountDetails.cryptoType.charAt(0).toUpperCase() + accountDetails.cryptoType.slice(1)} Wallet Address
                     </label>
                     <input
                       type="text"
@@ -292,10 +343,10 @@ export default function WithdrawPage() {
                       }
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter your crypto wallet address"
+                      placeholder={`Enter your ${accountDetails.cryptoType} wallet address`}
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Please ensure the wallet address is correct. Incorrect addresses may result in loss of funds.
+                      Please ensure the wallet address is correct and supports {accountDetails.cryptoType.toUpperCase()}. Incorrect addresses may result in loss of funds.
                     </p>
                   </div>
                 </div>
@@ -334,7 +385,7 @@ export default function WithdrawPage() {
                 disabled={
                   isLoading ||
                   !amount ||
-                  parseFloat(amount) < 50 ||
+                  parseFloat(amount) < minWithdrawal ||
                   parseFloat(amount) > availableBalance ||
                   parseFloat(amount) > maxWithdrawal ||
                   (withdrawalMethod === "bank_transfer" &&

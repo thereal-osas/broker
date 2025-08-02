@@ -62,18 +62,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check user's balance
-    const userQuery = `SELECT balance FROM users WHERE id = $1`;
-    const userResult = await db.query(userQuery, [session.user.id]);
+    // Check user's balance from user_balances table
+    const balanceQuery = `SELECT total_balance FROM user_balances WHERE user_id = $1`;
+    const balanceResult = await db.query(balanceQuery, [session.user.id]);
 
-    if (userResult.rows.length === 0) {
+    if (balanceResult.rows.length === 0) {
       return NextResponse.json(
-        { error: "User not found" },
+        { error: "User balance not found" },
         { status: 404 }
       );
     }
 
-    const userBalance = parseFloat(userResult.rows[0].balance);
+    const userBalance = parseFloat(balanceResult.rows[0].total_balance);
 
     if (userBalance < amount) {
       return NextResponse.json(
@@ -86,9 +86,9 @@ export async function POST(request: NextRequest) {
     await db.query('BEGIN');
 
     try {
-      // Deduct amount from user's balance
+      // Deduct amount from user's balance in user_balances table
       await db.query(
-        `UPDATE users SET balance = balance - $1 WHERE id = $2`,
+        `UPDATE user_balances SET total_balance = total_balance - $1 WHERE user_id = $2`,
         [amount, session.user.id]
       );
 
@@ -111,12 +111,13 @@ export async function POST(request: NextRequest) {
       // Record transaction
       await db.query(
         `INSERT INTO transactions (
-          user_id, type, amount, description, status, created_at
-        ) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)`,
+          user_id, type, amount, balance_type, description, status, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
         [
           session.user.id,
           'live_trade_investment',
           amount,
+          'total',
           `Live Trade Investment: ${plan.name}`,
           'completed'
         ]
