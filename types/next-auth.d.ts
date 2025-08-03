@@ -12,6 +12,7 @@ declare module 'next-auth' {
       phone: string;
       emailVerified: boolean;
       referralCode: string;
+      isActive: boolean;
     };
   }
 
@@ -25,6 +26,7 @@ declare module 'next-auth' {
     phone: string;
     emailVerified: boolean;
     referralCode: string;
+    isActive: boolean;
   }
 }
 
@@ -36,5 +38,6 @@ declare module 'next-auth/jwt' {
     phone: string;
     emailVerified: boolean;
     referralCode: string;
+    isActive: boolean;
   }
 }

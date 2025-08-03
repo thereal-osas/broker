@@ -15,13 +15,29 @@ export async function GET() {
     }
 
     const query = `
-      SELECT * FROM system_settings
-      ORDER BY key ASC
+      SELECT setting_key, setting_value, setting_type, description, category, is_editable
+      FROM system_settings
+      ORDER BY category, setting_key
     `;
 
     const result = await db.query(query);
 
-    return NextResponse.json(result.rows);
+    // Group settings by category
+    const settingsByCategory = result.rows.reduce((acc: any, setting: any) => {
+      if (!acc[setting.category]) {
+        acc[setting.category] = [];
+      }
+      acc[setting.category].push({
+        key: setting.setting_key,
+        value: setting.setting_value,
+        type: setting.setting_type,
+        description: setting.description,
+        editable: setting.is_editable
+      });
+      return acc;
+    }, {});
+
+    return NextResponse.json(settingsByCategory);
   } catch (error) {
     console.error("Admin settings fetch error:", error);
     return NextResponse.json(
@@ -43,30 +59,53 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
+    const { settings } = body;
 
-    // Start transaction
+    if (!settings || !Array.isArray(settings)) {
+      return NextResponse.json(
+        { error: "Invalid settings data" },
+        { status: 400 }
+      );
+    }
+
     await db.query('BEGIN');
 
     try {
-      // Update each setting
-      for (const [key, value] of Object.entries(body)) {
-        if (typeof value === 'string') {
-          const updateQuery = `
-            UPDATE system_settings 
-            SET value = $1, updated_at = CURRENT_TIMESTAMP
-            WHERE key = $2
-          `;
-          await db.query(updateQuery, [value, key]);
+      for (const setting of settings) {
+        const { key, value } = setting;
+
+        if (!key || value === undefined) {
+          throw new Error(`Invalid setting: ${key}`);
         }
+
+        // Validate specific settings
+        if (key === 'max_withdrawal_percentage') {
+          const percentage = parseFloat(value);
+          if (isNaN(percentage) || percentage < 0 || percentage > 100) {
+            throw new Error('Withdrawal percentage must be between 0 and 100');
+          }
+        }
+
+        if (key === 'min_withdrawal_amount' || key === 'max_withdrawal_amount') {
+          const amount = parseFloat(value);
+          if (isNaN(amount) || amount < 0) {
+            throw new Error(`${key} must be a positive number`);
+          }
+        }
+
+        // Update setting
+        await db.query(`
+          UPDATE system_settings
+          SET setting_value = $1, updated_at = CURRENT_TIMESTAMP
+          WHERE setting_key = $2 AND is_editable = true
+        `, [value, key]);
       }
 
       await db.query('COMMIT');
 
-      // Fetch updated settings
-      const fetchQuery = "SELECT * FROM system_settings ORDER BY key ASC";
-      const result = await db.query(fetchQuery);
-
-      return NextResponse.json(result.rows);
+      return NextResponse.json({
+        message: "Settings updated successfully"
+      });
     } catch (error) {
       await db.query('ROLLBACK');
       throw error;

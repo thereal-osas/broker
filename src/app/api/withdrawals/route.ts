@@ -54,16 +54,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
     }
 
-    if (amount < 50) {
+    // Get platform settings for validation
+    const settingsQuery = `
+      SELECT setting_key, setting_value, setting_type
+      FROM system_settings
+      WHERE setting_key IN ('min_withdrawal_amount', 'max_withdrawal_amount', 'max_withdrawal_percentage')
+    `;
+    const settingsResult = await db.query(settingsQuery);
+
+    const settings: Record<string, any> = {};
+    settingsResult.rows.forEach(row => {
+      settings[row.setting_key] = row.setting_type === 'number' ? parseFloat(row.setting_value) : row.setting_value;
+    });
+
+    const minWithdrawal = settings.min_withdrawal_amount || 50;
+    const maxWithdrawal = settings.max_withdrawal_amount || 50000;
+    const maxPercentage = settings.max_withdrawal_percentage || 100;
+
+    if (amount < minWithdrawal) {
       return NextResponse.json(
-        { error: "Minimum withdrawal amount is $50" },
+        { error: `Minimum withdrawal amount is $${minWithdrawal}` },
         { status: 400 }
       );
     }
 
-    if (amount > 50000) {
+    if (amount > maxWithdrawal) {
       return NextResponse.json(
-        { error: "Maximum withdrawal amount is $50,000 per request" },
+        { error: `Maximum withdrawal amount is $${maxWithdrawal.toLocaleString()} per request` },
         { status: 400 }
       );
     }
@@ -115,6 +132,15 @@ export async function POST(request: NextRequest) {
     if (!userBalance || userBalance.total_balance < amount) {
       return NextResponse.json(
         { error: "Insufficient balance" },
+        { status: 400 }
+      );
+    }
+
+    // Check percentage-based limit
+    const maxAllowedByPercentage = (userBalance.total_balance * maxPercentage) / 100;
+    if (amount > maxAllowedByPercentage) {
+      return NextResponse.json(
+        { error: `Maximum withdrawal is ${maxPercentage}% of your balance ($${maxAllowedByPercentage.toFixed(2)})` },
         { status: 400 }
       );
     }

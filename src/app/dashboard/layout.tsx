@@ -4,6 +4,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import DeactivationBanner from "../../components/DeactivationBanner";
 
 import {
   LayoutDashboard,
@@ -161,7 +162,17 @@ export default function DashboardLayout({
         </div>
 
         {/* Page content */}
-        <main className="flex-1">{children}</main>
+        <main className="flex-1">
+          {/* Show deactivation banner for deactivated users */}
+          {session?.user && !session.user.isActive && (
+            <div className="p-6 pb-0">
+              <DeactivationBanner userEmail={session.user.email} />
+            </div>
+          )}
+          <div className={session?.user && !session.user.isActive ? "opacity-50 pointer-events-none" : ""}>
+            {children}
+          </div>
+        </main>
       </div>
 
       {/* Mobile sidebar overlay */}

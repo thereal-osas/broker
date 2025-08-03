@@ -14,32 +14,49 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get platform settings
+    // Get platform settings from system_settings table
     const query = `
-      SELECT key, value, description 
-      FROM platform_settings 
-      WHERE key IN (
+      SELECT setting_key, setting_value, setting_type
+      FROM system_settings
+      WHERE setting_key IN (
         'max_withdrawal_percentage',
         'min_withdrawal_amount',
         'max_withdrawal_amount',
-        'default_referral_commission'
+        'withdrawal_processing_fee',
+        'withdrawal_fee_percentage'
       )
     `;
 
     const result = await db.query(query);
-    
-    // Convert to key-value object
-    const settings: Record<string, string> = {};
+
+    // Convert to key-value object with proper type conversion
+    const settings: Record<string, any> = {};
     result.rows.forEach(row => {
-      settings[row.key] = row.value;
+      let value = row.setting_value;
+
+      // Convert based on type
+      if (row.setting_type === 'number') {
+        value = parseFloat(value);
+      } else if (row.setting_type === 'boolean') {
+        value = value === 'true';
+      } else if (row.setting_type === 'json') {
+        try {
+          value = JSON.parse(value);
+        } catch {
+          // Keep as string if JSON parsing fails
+        }
+      }
+
+      settings[row.setting_key] = value;
     });
 
     // Set defaults if not found
     const defaultSettings = {
-      max_withdrawal_percentage: '100', // 100% of balance by default
-      min_withdrawal_amount: '50',
-      max_withdrawal_amount: '50000',
-      default_referral_commission: '0.05'
+      max_withdrawal_percentage: 100, // 100% of balance by default
+      min_withdrawal_amount: 50,
+      max_withdrawal_amount: 50000,
+      withdrawal_processing_fee: 0,
+      withdrawal_fee_percentage: 0
     };
 
     // Merge with defaults

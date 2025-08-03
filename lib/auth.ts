@@ -23,10 +23,8 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
-          // Check if user is active
-          if (!user.is_active) {
-            return null;
-          }
+          // Allow deactivated users to login but track their status
+          // We'll handle restrictions in the session callback and middleware
 
           // Compare password (plain text as requested)
           if (user.password !== credentials.password) {
@@ -44,6 +42,7 @@ export const authOptions: NextAuthOptions = {
             phone: user.phone,
             emailVerified: user.email_verified,
             referralCode: user.referral_code,
+            isActive: user.is_active,
           };
         } catch (error) {
           console.error('Authentication error:', error);
@@ -65,6 +64,7 @@ export const authOptions: NextAuthOptions = {
         token.phone = user.phone;
         token.emailVerified = Boolean(user.emailVerified);
         token.referralCode = user.referralCode;
+        token.isActive = Boolean(user.isActive);
       }
       return token;
     },
@@ -77,6 +77,7 @@ export const authOptions: NextAuthOptions = {
         session.user.phone = token.phone as string;
         session.user.emailVerified = token.emailVerified as boolean;
         session.user.referralCode = token.referralCode as string;
+        session.user.isActive = token.isActive as boolean;
       }
       return session;
     },

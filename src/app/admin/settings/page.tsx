@@ -15,18 +15,21 @@ import {
 } from 'lucide-react';
 
 interface SystemSetting {
-  id: string;
   key: string;
   value: string;
+  type: string;
   description: string;
-  created_at: string;
-  updated_at: string;
+  editable: boolean;
+}
+
+interface SettingsByCategory {
+  [category: string]: SystemSetting[];
 }
 
 export default function AdminSettingsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [settings, setSettings] = useState<SystemSetting[]>([]);
+  const [settingsByCategory, setSettingsByCategory] = useState<SettingsByCategory>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<Record<string, string>>({});
@@ -47,11 +50,11 @@ export default function AdminSettingsPage() {
       const response = await fetch('/api/admin/settings');
       if (response.ok) {
         const data = await response.json();
-        setSettings(data);
-        
+        setSettingsByCategory(data);
+
         // Initialize form data
         const initialData: Record<string, string> = {};
-        data.forEach((setting: SystemSetting) => {
+        Object.values(data).flat().forEach((setting: any) => {
           initialData[setting.key] = setting.value;
         });
         setFormData(initialData);
@@ -68,12 +71,18 @@ export default function AdminSettingsPage() {
     setIsSaving(true);
 
     try {
+      // Convert formData to settings array format
+      const settings = Object.entries(formData).map(([key, value]) => ({
+        key,
+        value
+      }));
+
       const response = await fetch('/api/admin/settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ settings }),
       });
 
       if (response.ok) {
@@ -105,16 +114,8 @@ export default function AdminSettingsPage() {
     return <Shield className="w-5 h-5" />;
   };
 
-  const settingCategories = [
-    {
-      title: 'Platform Settings',
-      keys: ['platform_name', 'support_whatsapp']
-    },
-    {
-      title: 'Financial Settings',
-      keys: ['default_referral_commission', 'min_withdrawal_amount', 'max_withdrawal_amount', 'max_withdrawal_percentage']
-    }
-  ];
+  // Get all settings as flat array for easier access
+  const allSettings = Object.values(settingsByCategory).flat();
 
   if (status === 'loading' || isLoading) {
     return (
@@ -144,96 +145,58 @@ export default function AdminSettingsPage() {
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <form onSubmit={handleSubmit} className="space-y-8">
-          {settingCategories.map((category, categoryIndex) => (
+          {Object.entries(settingsByCategory).map(([categoryName, categorySettings], categoryIndex) => (
             <motion.div
-              key={category.title}
+              key={categoryName}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: categoryIndex * 0.1 }}
               className="bg-white rounded-xl shadow-lg overflow-hidden"
             >
               <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h2 className="text-lg font-semibold text-gray-900">{category.title}</h2>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {categoryName.charAt(0).toUpperCase() + categoryName.slice(1)} Settings
+                </h2>
               </div>
 
               <div className="p-6 space-y-6">
-                {category.keys.map((key) => {
-                  const setting = settings.find(s => s.key === key);
-                  if (!setting) return null;
-
-                  return (
-                    <div key={key} className="space-y-2">
-                      <label className="flex items-center text-sm font-medium text-gray-700">
-                        <div className="mr-3 p-2 bg-blue-100 rounded-lg text-blue-600">
-                          {getSettingIcon(key)}
-                        </div>
-                        <div>
-                          <div className="font-medium">
-                            {setting.key.split('_').map(word => 
-                              word.charAt(0).toUpperCase() + word.slice(1)
-                            ).join(' ')}
-                          </div>
-                          <div className="text-xs text-gray-500">{setting.description}</div>
-                        </div>
-                      </label>
-                      
-                      <input
-                        type={key.includes('amount') || key.includes('commission') ? 'number' : 'text'}
-                        step={key.includes('amount') || key.includes('commission') ? '0.01' : undefined}
-                        min={key.includes('amount') || key.includes('commission') ? '0' : undefined}
-                        value={formData[key] || ''}
-                        onChange={(e) => handleChange(key, e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input"
-                        placeholder={`Enter ${setting.key.replace(/_/g, ' ')}`}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          ))}
-
-          {/* Additional Settings */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white rounded-xl shadow-lg overflow-hidden"
-          >
-            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-              <h2 className="text-lg font-semibold text-gray-900">Other Settings</h2>
-            </div>
-
-            <div className="p-6 space-y-6">
-              {settings
-                .filter(setting => !settingCategories.some(cat => cat.keys.includes(setting.key)))
-                .map((setting) => (
+                {categorySettings.map((setting) => (
                   <div key={setting.key} className="space-y-2">
                     <label className="flex items-center text-sm font-medium text-gray-700">
-                      <div className="mr-3 p-2 bg-gray-100 rounded-lg text-gray-600">
+                      <div className="mr-3 p-2 bg-blue-100 rounded-lg text-blue-600">
                         {getSettingIcon(setting.key)}
                       </div>
                       <div>
                         <div className="font-medium">
-                          {setting.key.split('_').map(word => 
+                          {setting.key.split('_').map((word: string) =>
                             word.charAt(0).toUpperCase() + word.slice(1)
                           ).join(' ')}
                         </div>
                         <div className="text-xs text-gray-500">{setting.description}</div>
                       </div>
                     </label>
-                    
+
                     <input
-                      type="text"
+                      type={setting.type === 'number' ? 'number' : 'text'}
+                      step={setting.type === 'number' ? '0.01' : undefined}
+                      min={setting.type === 'number' ? '0' : undefined}
+                      max={setting.key === 'max_withdrawal_percentage' ? '100' : undefined}
                       value={formData[setting.key] || ''}
                       onChange={(e) => handleChange(setting.key, e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input"
+                      disabled={!setting.editable}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input disabled:bg-gray-100 disabled:cursor-not-allowed"
                       placeholder={`Enter ${setting.key.replace(/_/g, ' ')}`}
                     />
+                    {setting.key === 'max_withdrawal_percentage' && (
+                      <p className="text-xs text-gray-500">
+                        Set the maximum percentage of balance users can withdraw per transaction (0-100%)
+                      </p>
+                    )}
                   </div>
                 ))}
-            </div>
-          </motion.div>
+              </div>
+            </motion.div>
+          ))}
 
           {/* Save Button */}
           <motion.div

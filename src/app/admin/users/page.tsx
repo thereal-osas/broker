@@ -14,6 +14,7 @@ import {
   Phone,
   Calendar,
   Shield,
+  Trash2,
 } from "lucide-react";
 import BalanceManager from "../../../components/admin/BalanceManager";
 
@@ -47,6 +48,9 @@ export default function AdminUsers() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showBalanceManager, setShowBalanceManager] = useState(false);
   const [showUserDetails, setShowUserDetails] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -104,6 +108,40 @@ export default function AdminUsers() {
       }
     } catch (error) {
       console.error("Error updating email verification:", error);
+    }
+  };
+
+  const handleDeleteUser = (user: User) => {
+    setUserToDelete(user);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/admin/users/${userToDelete.id}/delete`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        fetchUsers();
+        setShowDeleteConfirm(false);
+        setUserToDelete(null);
+        alert(`User ${userToDelete.first_name} ${userToDelete.last_name} has been deleted successfully.`);
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to delete user");
+      }
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      alert("An error occurred while deleting the user");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -188,7 +226,7 @@ export default function AdminUsers() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className="hover:bg-gray-50"
+                  className={`hover:bg-gray-50 ${!user.is_active ? 'bg-red-50' : ''}`}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -199,8 +237,15 @@ export default function AdminUsers() {
                         </span>
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {user.first_name} {user.last_name}
+                        <div className="flex items-center">
+                          <div className="text-sm font-medium text-gray-900">
+                            {user.first_name} {user.last_name}
+                          </div>
+                          {!user.is_active && (
+                            <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              Deactivated
+                            </span>
+                          )}
                         </div>
                         <div className="text-sm text-gray-500">
                           {user.email}
@@ -302,6 +347,13 @@ export default function AdminUsers() {
                       }
                     >
                       <Mail className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteUser(user)}
+                      className="text-red-600 hover:text-red-900 p-1 rounded"
+                      title="Delete User"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </td>
                 </motion.tr>
@@ -540,6 +592,82 @@ export default function AdminUsers() {
                 className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
               >
                 Close
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && userToDelete && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowDeleteConfirm(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center mb-4">
+              <div className="p-3 bg-red-100 rounded-full mr-4">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Delete User</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-gray-700">
+                Are you sure you want to delete{" "}
+                <span className="font-semibold">
+                  {userToDelete.first_name} {userToDelete.last_name}
+                </span>{" "}
+                ({userToDelete.email})?
+              </p>
+              <div className="mt-3 p-3 bg-red-50 rounded-lg">
+                <p className="text-sm text-red-700">
+                  <strong>Warning:</strong> This will permanently delete:
+                </p>
+                <ul className="text-sm text-red-600 mt-2 list-disc list-inside">
+                  <li>User account and profile</li>
+                  <li>All balance records</li>
+                  <li>Investment history</li>
+                  <li>Transaction records</li>
+                  <li>Withdrawal and deposit requests</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteUser}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete User
+                  </>
+                )}
               </button>
             </div>
           </motion.div>
