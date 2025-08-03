@@ -72,9 +72,10 @@ export async function PUT(
       // If approved, deduct from user's balance and create transaction
       if (status === 'approved' && withdrawalRequest.status === 'pending') {
         const amount = parseFloat(withdrawalRequest.amount);
-        
+        const userBalance = parseFloat(withdrawalRequest.total_balance || 0);
+
         // Check if user has sufficient balance
-        if (withdrawalRequest.total_balance < amount) {
+        if (userBalance < amount) {
           await db.query('ROLLBACK');
           return NextResponse.json(
             { error: "Insufficient balance" },
