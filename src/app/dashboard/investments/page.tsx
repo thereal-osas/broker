@@ -25,7 +25,7 @@ export default function InvestmentsPage() {
     isLoading: investmentsLoading,
     fetchInvestments,
   } = useInvestments();
-  const { balance } = useBalance();
+  const { balance, refreshBalance } = useBalance();
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<"active" | "plans">("active");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -61,8 +61,10 @@ export default function InvestmentsPage() {
         toast.success("Investment created successfully!");
         fetchInvestments();
         setRefreshTrigger((prev) => prev + 1);
-        // Refresh balance as well
-        window.location.reload();
+        // Refresh balance properly instead of page reload
+        if (refreshBalance) {
+          refreshBalance();
+        }
       } else {
         const errorData = await response.json();
         toast.error(errorData.error || "Failed to create investment");

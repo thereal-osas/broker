@@ -30,6 +30,7 @@ interface WithdrawalRequest {
     routingNumber?: string;
     walletAddress?: string;
     paypalId?: string;
+    cryptoType?: string;
   };
   status: "pending" | "approved" | "declined" | "processed";
   admin_notes: string | null;
@@ -48,6 +49,27 @@ export default function AdminWithdrawalsPage() {
   const [filter, setFilter] = useState<string>("all");
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<WithdrawalRequest | null>(null);
+
+  // Helper function to format withdrawal method display
+  const formatWithdrawalMethod = (method: string, accountDetails: any) => {
+    if (method === 'crypto' && accountDetails?.cryptoType) {
+      const cryptoMap: { [key: string]: string } = {
+        bitcoin: 'BTC',
+        ethereum: 'ETH',
+        usdt: 'USDT',
+        usdc: 'USDC',
+        bnb: 'BNB',
+        cardano: 'ADA',
+        solana: 'SOL',
+        dogecoin: 'DOGE',
+        litecoin: 'LTC',
+        polygon: 'MATIC'
+      };
+      const cryptoSymbol = cryptoMap[accountDetails.cryptoType] || accountDetails.cryptoType.toUpperCase();
+      return `Crypto - ${cryptoSymbol}`;
+    }
+    return method.replace("_", " ");
+  };
   const [adminNotes, setAdminNotes] = useState("");
   const toast = useToast();
 
@@ -287,7 +309,7 @@ export default function AdminWithdrawalsPage() {
                         <CreditCard className="h-4 w-4 text-gray-400 mr-2" />
                         <div>
                           <div className="text-sm text-gray-900 capitalize">
-                            {request.withdrawal_method.replace("_", " ")}
+                            {formatWithdrawalMethod(request.withdrawal_method, request.account_details)}
                           </div>
                           <div className="text-xs text-gray-500 mt-1">
                             {request.withdrawal_method === 'bank_transfer' && request.account_details.accountNumber && (
@@ -300,6 +322,9 @@ export default function AdminWithdrawalsPage() {
                             {request.withdrawal_method === 'crypto' && request.account_details.walletAddress && (
                               <div>
                                 <div>Wallet: {request.account_details.walletAddress}</div>
+                                {request.account_details.cryptoType && (
+                                  <div>Type: {request.account_details.cryptoType.charAt(0).toUpperCase() + request.account_details.cryptoType.slice(1)}</div>
+                                )}
                               </div>
                             )}
                             {request.withdrawal_method === 'paypal' && request.account_details.paypalId && (
@@ -415,7 +440,7 @@ export default function AdminWithdrawalsPage() {
                     Withdrawal Method
                   </label>
                   <p className="text-sm text-gray-900 capitalize">
-                    {selectedRequest.withdrawal_method.replace("_", " ")}
+                    {formatWithdrawalMethod(selectedRequest.withdrawal_method, selectedRequest.account_details)}
                   </p>
                 </div>
                 <div>

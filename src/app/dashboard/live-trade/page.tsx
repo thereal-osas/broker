@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useBalance } from "../../../hooks/useBalance";
 import {
   TrendingUp,
   Clock,
@@ -42,6 +43,7 @@ interface UserLiveTrade {
 export default function UserLiveTradePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { balance, refreshBalance } = useBalance();
 
   const [plans, setPlans] = useState<LiveTradePlan[]>([]);
   const [userTrades, setUserTrades] = useState<UserLiveTrade[]>([]);
@@ -131,6 +133,7 @@ export default function UserLiveTradePage() {
         setSelectedPlan(null);
         setInvestAmount("");
         fetchUserTrades();
+        refreshBalance(); // Refresh balance after successful investment
       } else {
         const errorData = await response.json();
         toast.error(errorData.error || "Failed to start live trade");
@@ -183,11 +186,19 @@ export default function UserLiveTradePage() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Live Trade</h1>
-          <p className="mt-2 text-gray-600">
-            Experience real-time trading with hourly profit calculations
-          </p>
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Live Trade</h1>
+            <p className="mt-2 text-gray-600">
+              Experience real-time trading with hourly profit calculations
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-500">Available Balance</p>
+            <p className="text-2xl font-bold text-green-600">
+              ${balance?.total_balance?.toFixed(2) || "0.00"}
+            </p>
+          </div>
         </div>
 
         {/* User's Active Trades */}
