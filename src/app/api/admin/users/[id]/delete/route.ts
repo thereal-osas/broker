@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../../../../auth/[...nextauth]/route";
-import { db } from "../../../../../../lib/db";
+import { authOptions } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,6 +17,7 @@ export async function DELETE(
       );
     }
 
+    const params = await context.params;
     const { id } = params;
 
     if (!id) {
