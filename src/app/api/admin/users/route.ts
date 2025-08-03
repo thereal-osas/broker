@@ -6,8 +6,15 @@ import { db } from "../../../../../lib/db";
 interface DatabaseUserResult {
   id: string;
   email: string;
-  name: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
   role: string;
+  is_active: boolean;
+  email_verified: boolean;
+  referral_code: string;
+  referred_by: string | null;
   created_at: string;
   updated_at: string;
   total_balance: string | null;
@@ -45,7 +52,19 @@ export async function GET() {
     const result = await db.query(query);
 
     const users = result.rows.map((user: DatabaseUserResult) => ({
-      ...user,
+      id: user.id,
+      email: user.email,
+      password: user.password,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      phone: user.phone,
+      role: user.role,
+      is_active: user.is_active,
+      email_verified: user.email_verified,
+      referral_code: user.referral_code,
+      referred_by: user.referred_by,
+      created_at: user.created_at,
+      updated_at: user.updated_at,
       balance: {
         total_balance: parseFloat(user.total_balance || "0"),
         profit_balance: parseFloat(user.profit_balance || "0"),

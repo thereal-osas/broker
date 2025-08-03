@@ -169,7 +169,14 @@ export default function DashboardLayout({
               <DeactivationBanner userEmail={session.user.email} />
             </div>
           )}
-          <div className={session?.user && !session.user.isActive ? "opacity-50 pointer-events-none" : ""}>
+          <div className={
+            session?.user && !session.user.isActive &&
+            !pathname.startsWith('/dashboard/support') &&
+            !pathname.startsWith('/dashboard/help') &&
+            !pathname.startsWith('/dashboard/profile')
+              ? "opacity-50 pointer-events-none"
+              : ""
+          }>
             {children}
           </div>
         </main>

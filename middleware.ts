@@ -24,6 +24,8 @@ const RESTRICTED_API_ROUTES = [
 ];
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
   try {
     const token = await getToken({
       req: request,
@@ -35,19 +37,18 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    const { pathname } = request.nextUrl;
-
     // If user is active or isActive is undefined (backward compatibility), allow all requests
     if (token.isActive === true || token.isActive === undefined) {
       return NextResponse.next();
     }
+
+    // User is deactivated - continue to access control logic below
+
   } catch (error) {
     // If there's an error with token parsing, let the request proceed
     console.error('Middleware error:', error);
     return NextResponse.next();
   }
-
-  const { pathname } = request.nextUrl;
 
   // User is deactivated - check if they're accessing allowed routes
   const isAllowedRoute = ALLOWED_ROUTES_FOR_DEACTIVATED.some(route => 
