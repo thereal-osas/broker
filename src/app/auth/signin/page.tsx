@@ -1,19 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { AlertTriangle, MessageCircle } from "lucide-react";
 
-export default function SignIn() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [deactivationMessage, setDeactivationMessage] = useState("");
-  const router = useRouter();
+// Component to handle search params (needs Suspense)
+function SearchParamsHandler({ setDeactivationMessage }: { setDeactivationMessage: (message: string) => void }) {
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -26,7 +21,18 @@ export default function SignIn() {
     } else if (reason === 'account_deactivated') {
       setDeactivationMessage("Your account has been deactivated. Please contact support to regain access.");
     }
-  }, [searchParams]);
+  }, [searchParams, setDeactivationMessage]);
+
+  return null; // This component doesn't render anything
+}
+
+export default function SignIn() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [deactivationMessage, setDeactivationMessage] = useState("");
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +72,11 @@ export default function SignIn() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
+      {/* Handle search params with Suspense */}
+      <Suspense fallback={null}>
+        <SearchParamsHandler setDeactivationMessage={setDeactivationMessage} />
+      </Suspense>
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

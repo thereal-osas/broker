@@ -76,7 +76,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Check if session has been invalidated
-    if (token.sub && token.iat) {
+    if (token.sub && token.iat && typeof token.iat === 'number') {
       const isSessionInvalidated = await checkSessionInvalidation(token.sub, token.iat);
 
       if (isSessionInvalidated) {
