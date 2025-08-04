@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
         amount,
         balanceType: balanceType.replace("_balance", ""),
         description:
-          description || `Investment - ${balanceType.replace("_", " ")}`,
+          description || `Deposit Alert - ${balanceType.replace("_", " ")}`,
         status: "completed",
       });
 
@@ -147,7 +147,7 @@ export async function PUT(request: NextRequest) {
         balanceType: balanceType.replace("_balance", ""),
         description:
           description ||
-          `Admin ${operation} - ${balanceType.replace("_", " ")}`,
+          `${operation === "add" ? "Deposit Alert" : "Debit Alert"} - ${balanceType.replace("_", " ")}`,
         status: "completed",
       });
 
