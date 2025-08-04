@@ -168,12 +168,7 @@ export const userQueries = {
     return result.rows[0];
   },
 
-  // Find user by ID
-  async findById(id: string) {
-    const query = "SELECT * FROM users WHERE id = $1";
-    const result = await db.query(query, [id]);
-    return result.rows[0];
-  },
+
 
   // Find user by referral code
   async findByReferralCode(referralCode: string) {

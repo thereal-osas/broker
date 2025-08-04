@@ -20,16 +20,24 @@ export default function DeactivationBanner({ userEmail }: DeactivationBannerProp
         initial={{ opacity: 0, y: -50 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -50 }}
-        className="bg-red-50 border-l-4 border-red-400 p-4 mb-6 relative"
+        className="bg-red-50 border-l-4 border-red-500 p-6 mb-6 relative shadow-lg rounded-r-lg"
       >
         <div className="flex items-start">
           <div className="flex-shrink-0">
-            <AlertTriangle className="h-5 w-5 text-red-400" />
+            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+              <AlertTriangle className="h-6 w-6 text-red-600" />
+            </div>
           </div>
-          <div className="ml-3 flex-1">
-            <h3 className="text-sm font-medium text-red-800">
-              Account Deactivated
-            </h3>
+          <div className="ml-4 flex-1">
+            <div className="flex items-center">
+              <h3 className="text-lg font-semibold text-red-800">
+                Account Deactivated
+              </h3>
+              <span className="ml-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                Deactivated
+              </span>
+            </div>
             <div className="mt-2 text-sm text-red-700">
               <p>
                 Your account has been deactivated. You cannot perform transactions, 
