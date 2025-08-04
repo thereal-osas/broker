@@ -38,6 +38,7 @@ interface User {
     deposit_balance: number;
     bonus_balance: number;
     credit_score_balance: number;
+    card_balance: number;
   };
 }
 
@@ -399,6 +400,7 @@ export default function AdminUsers() {
                   deposit_balance: 0,
                   bonus_balance: 0,
                   credit_score_balance: 0,
+                  card_balance: 0,
                 }
               }
               onBalanceUpdate={() => {

@@ -11,6 +11,7 @@ interface Balance {
   deposit_balance: number;
   bonus_balance: number;
   credit_score_balance: number;
+  card_balance: number;
   created_at: string;
   updated_at: string;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { DollarSign, TrendingUp, CreditCard, Gift, Star } from "lucide-react";
+import { DollarSign, TrendingUp, CreditCard, Gift, Star, Wallet } from "lucide-react";
 
 interface BalanceCardsProps {
   balance: {
@@ -10,6 +10,7 @@ interface BalanceCardsProps {
     deposit_balance: number;
     bonus_balance: number;
     credit_score_balance: number;
+    card_balance: number;
   };
 }
 
@@ -50,6 +51,15 @@ export default function BalanceCards({ balance }: BalanceCardsProps) {
       bgColor: "bg-orange-50",
       iconColor: "text-orange-600",
       description: "Promotional bonuses",
+    },
+    {
+      title: "Card Balance",
+      amount: balance.card_balance,
+      icon: Wallet,
+      color: "from-indigo-500 to-indigo-600",
+      bgColor: "bg-indigo-50",
+      iconColor: "text-indigo-600",
+      description: "Card-linked funds",
     },
     {
       title: "Credit Score",

@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
       "deposit_balance",
       "bonus_balance",
       "credit_score_balance",
+      "card_balance",
     ];
     if (!validBalanceTypes.includes(balanceType)) {
       return NextResponse.json(
@@ -118,6 +119,7 @@ export async function PUT(request: NextRequest) {
       "deposit_balance",
       "bonus_balance",
       "credit_score_balance",
+      "card_balance",
     ];
     if (!validBalanceTypes.includes(balanceType)) {
       return NextResponse.json(

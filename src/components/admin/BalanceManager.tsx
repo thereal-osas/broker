@@ -12,6 +12,7 @@ interface BalanceManagerProps {
     deposit_balance: number;
     bonus_balance: number;
     credit_score_balance: number;
+    card_balance: number;
   };
   onBalanceUpdate: () => void;
 }
@@ -37,6 +38,7 @@ export default function BalanceManager({
       color: "bg-purple-500",
     },
     { key: "bonus_balance", label: "Bonus Balance", color: "bg-orange-500" },
+    { key: "card_balance", label: "Card Balance", color: "bg-indigo-500" },
     {
       key: "credit_score_balance",
       label: "Credit Score Balance",

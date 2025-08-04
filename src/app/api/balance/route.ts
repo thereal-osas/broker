@@ -21,12 +21,15 @@ export async function GET() {
       const newBalance = await balanceQueries.createUserBalance(
         session.user.id
       );
-      // Convert string values to numbers - use actual stored values
-      const total_balance = parseFloat(newBalance.total_balance || 0);
+      // Convert string values to numbers
       const profit_balance = parseFloat(newBalance.profit_balance || 0);
       const deposit_balance = parseFloat(newBalance.deposit_balance || 0);
       const bonus_balance = parseFloat(newBalance.bonus_balance || 0);
       const credit_score_balance = parseFloat(newBalance.credit_score_balance || 0);
+      const card_balance = parseFloat(newBalance.card_balance || 0);
+
+      // Calculate total balance including card balance (credit score excluded)
+      const total_balance = profit_balance + deposit_balance + bonus_balance + card_balance;
 
       const formattedNewBalance = {
         ...newBalance,
@@ -35,16 +38,20 @@ export async function GET() {
         deposit_balance,
         bonus_balance,
         credit_score_balance,
+        card_balance,
       };
       return NextResponse.json(formattedNewBalance);
     }
 
-    // Convert string values to numbers - use actual stored values from database
-    const total_balance = parseFloat(balance.total_balance || 0);
+    // Convert string values to numbers
     const profit_balance = parseFloat(balance.profit_balance || 0);
     const deposit_balance = parseFloat(balance.deposit_balance || 0);
     const bonus_balance = parseFloat(balance.bonus_balance || 0);
     const credit_score_balance = parseFloat(balance.credit_score_balance || 0);
+    const card_balance = parseFloat(balance.card_balance || 0);
+
+    // Calculate total balance including card balance (credit score excluded)
+    const total_balance = profit_balance + deposit_balance + bonus_balance + card_balance;
 
     const formattedBalance = {
       ...balance,
@@ -53,6 +60,7 @@ export async function GET() {
       deposit_balance,
       bonus_balance,
       credit_score_balance,
+      card_balance,
     };
 
     return NextResponse.json(formattedBalance);
