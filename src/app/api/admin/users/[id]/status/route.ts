@@ -78,6 +78,24 @@ export async function PUT(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    const updatedUser = result.rows[0];
+
+    // If user was deactivated, invalidate their session
+    if (isActive === false) {
+      try {
+        // Add session invalidation timestamp to force logout on next request
+        await db.query(
+          `UPDATE users SET session_invalidated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+          [userId]
+        );
+
+        console.log(`Session invalidated for deactivated user: ${updatedUser.email}`);
+      } catch (sessionError) {
+        console.error("Failed to invalidate session:", sessionError);
+        // Don't fail the main operation if session invalidation fails
+      }
+    }
+
     // Build success message
     const messages = [];
     if (isActive !== undefined) {
@@ -89,7 +107,8 @@ export async function PUT(
 
     return NextResponse.json({
       message: `User ${messages.join(" and ")} successfully`,
-      user: result.rows[0],
+      user: updatedUser,
+      sessionInvalidated: isActive === false ? true : undefined,
     });
   } catch (error) {
     console.error("User status update error:", error);

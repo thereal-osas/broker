@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import { Pool } from 'pg';
 
 // Define routes that deactivated users can access
 const ALLOWED_ROUTES_FOR_DEACTIVATED = [
@@ -23,6 +24,43 @@ const RESTRICTED_API_ROUTES = [
   '/api/transactions',
 ];
 
+// Helper function to check session invalidation
+async function checkSessionInvalidation(userId: string, tokenIssuedAt: number): Promise<boolean> {
+  try {
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    });
+
+    const result = await pool.query(
+      'SELECT session_invalidated_at FROM users WHERE id = $1',
+      [userId]
+    );
+
+    await pool.end();
+
+    if (result.rows.length === 0) {
+      return false; // User not found, don't invalidate
+    }
+
+    const sessionInvalidatedAt = result.rows[0].session_invalidated_at;
+
+    if (!sessionInvalidatedAt) {
+      return false; // No invalidation timestamp
+    }
+
+    // Convert timestamps to compare
+    const invalidatedTimestamp = new Date(sessionInvalidatedAt).getTime();
+    const tokenTimestamp = tokenIssuedAt * 1000; // JWT iat is in seconds
+
+    // If session was invalidated after token was issued, force logout
+    return invalidatedTimestamp > tokenTimestamp;
+  } catch (error) {
+    console.error('Session invalidation check failed:', error);
+    return false; // Don't invalidate on error
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -35,6 +73,19 @@ export async function middleware(request: NextRequest) {
     // If no token, let the request proceed (auth will handle it)
     if (!token) {
       return NextResponse.next();
+    }
+
+    // Check if session has been invalidated
+    if (token.sub && token.iat) {
+      const isSessionInvalidated = await checkSessionInvalidation(token.sub, token.iat);
+
+      if (isSessionInvalidated) {
+        // Force logout by redirecting to signout
+        const url = request.nextUrl.clone();
+        url.pathname = '/api/auth/signout';
+        url.searchParams.set('callbackUrl', '/auth/signin?message=session_invalidated');
+        return NextResponse.redirect(url);
+      }
     }
 
     // If user is active or isActive is undefined (backward compatibility), allow all requests

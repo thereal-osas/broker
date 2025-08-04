@@ -1,17 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn, getSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { AlertTriangle, MessageCircle } from "lucide-react";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [deactivationMessage, setDeactivationMessage] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    // Check for URL parameters indicating session invalidation or deactivation
+    const message = searchParams.get('message');
+    const reason = searchParams.get('reason');
+
+    if (message === 'session_invalidated') {
+      setDeactivationMessage("Your session has been terminated. Please contact support if you believe this is an error.");
+    } else if (reason === 'account_deactivated') {
+      setDeactivationMessage("Your account has been deactivated. Please contact support to regain access.");
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +41,13 @@ export default function SignIn() {
       });
 
       if (result?.error) {
-        setError("Invalid email or password");
+        // Check if error is due to account deactivation
+        if (result.error.includes('deactivated') || result.error.includes('ACCOUNT_DEACTIVATED')) {
+          setDeactivationMessage("Your account has been deactivated. Please contact support to regain access.");
+          setError("");
+        } else {
+          setError("Invalid email or password");
+        }
       } else {
         // Get session to check user role
         const session = await getSession();
@@ -72,6 +93,34 @@ export default function SignIn() {
               className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 text-red-200 text-sm"
             >
               {error}
+            </motion.div>
+          )}
+
+          {deactivationMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-red-600/30 border border-red-500 rounded-lg p-4 text-red-100"
+            >
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <AlertTriangle className="h-5 w-5 text-red-400 mt-0.5" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-100 mb-1">
+                    Account Deactivated
+                  </h3>
+                  <p className="text-sm text-red-200 mb-3">
+                    {deactivationMessage}
+                  </p>
+                  <div className="flex items-center space-x-2">
+                    <MessageCircle className="h-4 w-4 text-red-300" />
+                    <span className="text-xs text-red-300">
+                      Contact our support team for immediate assistance
+                    </span>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           )}
 
