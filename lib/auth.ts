@@ -23,15 +23,13 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
-          // Compare password first (plain text as requested)
+          // Compare password (plain text as requested)
           if (user.password !== credentials.password) {
             return null;
           }
 
-          // Block deactivated users from logging in
-          if (!user.is_active) {
-            throw new Error('ACCOUNT_DEACTIVATED: Your account has been deactivated. Please contact support to regain access.');
-          }
+          // Allow deactivated users to login - they'll see restrictions after login
+          // Session invalidation and access control handled by middleware and UI
 
           // Return user object
           return {

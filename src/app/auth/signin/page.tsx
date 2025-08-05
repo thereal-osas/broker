@@ -12,14 +12,11 @@ function SearchParamsHandler({ setDeactivationMessage }: { setDeactivationMessag
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Check for URL parameters indicating session invalidation or deactivation
+    // Check for URL parameters indicating session invalidation
     const message = searchParams.get('message');
-    const reason = searchParams.get('reason');
 
     if (message === 'session_invalidated') {
-      setDeactivationMessage("Your session has been terminated. Please contact support if you believe this is an error.");
-    } else if (reason === 'account_deactivated') {
-      setDeactivationMessage("Your account has been deactivated. Please contact support to regain access.");
+      setDeactivationMessage("Your session has been terminated. You can log back in to access your account.");
     }
   }, [searchParams, setDeactivationMessage]);
 
@@ -47,13 +44,7 @@ export default function SignIn() {
       });
 
       if (result?.error) {
-        // Check if error is due to account deactivation
-        if (result.error.includes('deactivated') || result.error.includes('ACCOUNT_DEACTIVATED')) {
-          setDeactivationMessage("Your account has been deactivated. Please contact support to regain access.");
-          setError("");
-        } else {
-          setError("Invalid email or password");
-        }
+        setError("Invalid email or password");
       } else {
         // Get session to check user role
         const session = await getSession();
@@ -119,7 +110,7 @@ export default function SignIn() {
                 </div>
                 <div className="ml-3">
                   <h3 className="text-sm font-medium text-red-100 mb-1">
-                    Account Deactivated
+                    Session Terminated
                   </h3>
                   <p className="text-sm text-red-200 mb-3">
                     {deactivationMessage}
@@ -127,7 +118,7 @@ export default function SignIn() {
                   <div className="flex items-center space-x-2">
                     <MessageCircle className="h-4 w-4 text-red-300" />
                     <span className="text-xs text-red-300">
-                      Contact our support team for immediate assistance
+                      You can log back in to access your account
                     </span>
                   </div>
                 </div>
