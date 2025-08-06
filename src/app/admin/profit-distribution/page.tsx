@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { 
-  TrendingUp, 
-  Play, 
-  RefreshCw, 
-  Users, 
-  DollarSign, 
+import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import {
+  TrendingUp,
+  Play,
+  RefreshCw,
+  Users,
+  DollarSign,
   Calendar,
   CheckCircle,
-  Clock
-} from 'lucide-react';
-import { useToast } from '../../../hooks/useToast';
+  Clock,
+} from "lucide-react";
+import { useToast } from "../../../hooks/useToast";
 
 interface ActiveInvestment {
   id: string;
@@ -32,40 +32,53 @@ interface DistributionResult {
   errors: number;
 }
 
+interface LiveTradeDistributionResult {
+  processed: number;
+  skipped: number;
+  errors: number;
+  completed: number;
+}
+
 export default function ProfitDistributionPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const toast = useToast();
-  const [activeInvestments, setActiveInvestments] = useState<ActiveInvestment[]>([]);
+  const [activeInvestments, setActiveInvestments] = useState<
+    ActiveInvestment[]
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDistributing, setIsDistributing] = useState(false);
-  const [lastDistribution, setLastDistribution] = useState<DistributionResult | null>(null);
+  const [isDistributingLiveTrade, setIsDistributingLiveTrade] = useState(false);
+  const [lastDistribution, setLastDistribution] =
+    useState<DistributionResult | null>(null);
+  const [lastLiveTradeDistribution, setLastLiveTradeDistribution] =
+    useState<LiveTradeDistributionResult | null>(null);
 
   const fetchActiveInvestments = useCallback(async () => {
     try {
-      const response = await fetch('/api/admin/profit-distribution');
+      const response = await fetch("/api/admin/profit-distribution");
       if (response.ok) {
         const data = await response.json();
         setActiveInvestments(data.activeInvestments || []);
       }
     } catch (error) {
-      console.error('Error fetching active investments:', error);
-      toast.error('Failed to fetch active investments');
+      console.error("Error fetching active investments:", error);
+      toast.error("Failed to fetch active investments");
     } finally {
       setIsLoading(false);
     }
   }, [toast]);
 
   useEffect(() => {
-    if (status === 'loading') return;
+    if (status === "loading") return;
 
     if (!session?.user) {
-      router.push('/auth/signin');
+      router.push("/auth/signin");
       return;
     }
 
-    if (session.user.role !== 'admin') {
-      router.push('/dashboard');
+    if (session.user.role !== "admin") {
+      router.push("/dashboard");
       return;
     }
 
@@ -75,23 +88,53 @@ export default function ProfitDistributionPage() {
   const runProfitDistribution = async () => {
     setIsDistributing(true);
     try {
-      const response = await fetch('/api/admin/profit-distribution', {
-        method: 'POST',
+      const response = await fetch("/api/admin/profit-distribution", {
+        method: "POST",
       });
 
       if (response.ok) {
         const data = await response.json();
         setLastDistribution(data.result);
-        toast.success(`Profit distribution completed: ${data.result.processed} processed, ${data.result.skipped} skipped`);
+        toast.success(
+          `Profit distribution completed: ${data.result.processed} processed, ${data.result.skipped} skipped`
+        );
         fetchActiveInvestments(); // Refresh the list
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Failed to run profit distribution');
+        toast.error(error.error || "Failed to run profit distribution");
       }
     } catch {
-      toast.error('An error occurred while running profit distribution');
+      toast.error("An error occurred while running profit distribution");
     } finally {
       setIsDistributing(false);
+    }
+  };
+
+  const runLiveTradeProfitDistribution = async () => {
+    setIsDistributingLiveTrade(true);
+    try {
+      const response = await fetch("/api/cron/calculate-live-trade-profits", {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setLastLiveTradeDistribution(data.result);
+        toast.success(
+          `Live trade profit distribution completed: ${data.result.processed} processed, ${data.result.completed} completed`
+        );
+      } else {
+        const error = await response.json();
+        toast.error(
+          error.error || "Failed to run live trade profit distribution"
+        );
+      }
+    } catch {
+      toast.error(
+        "An error occurred while running live trade profit distribution"
+      );
+    } finally {
+      setIsDistributingLiveTrade(false);
     }
   };
 
@@ -103,7 +146,7 @@ export default function ProfitDistributionPage() {
     return (daysCompleted / totalDays) * 100;
   };
 
-  if (status === 'loading' || isLoading) {
+  if (status === "loading" || isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
@@ -118,8 +161,12 @@ export default function ProfitDistributionPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Profit Distribution</h1>
-              <p className="text-gray-600">Manage daily profit distributions for active investments</p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Profit Distribution
+              </h1>
+              <p className="text-gray-600">
+                Manage daily profit distributions for active investments
+              </p>
             </div>
             <div className="flex items-center space-x-4">
               <button
@@ -127,7 +174,9 @@ export default function ProfitDistributionPage() {
                 disabled={isLoading}
                 className="flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
-                <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
+                />
                 Refresh
               </button>
               <button
@@ -135,8 +184,22 @@ export default function ProfitDistributionPage() {
                 disabled={isDistributing || activeInvestments.length === 0}
                 className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Play className={`w-4 h-4 mr-2 ${isDistributing ? 'animate-spin' : ''}`} />
-                {isDistributing ? 'Distributing...' : 'Run Distribution'}
+                <Play
+                  className={`w-4 h-4 mr-2 ${isDistributing ? "animate-spin" : ""}`}
+                />
+                {isDistributing ? "Distributing..." : "Run Distribution"}
+              </button>
+              <button
+                onClick={runLiveTradeProfitDistribution}
+                disabled={isDistributingLiveTrade}
+                className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <TrendingUp
+                  className={`w-4 h-4 mr-2 ${isDistributingLiveTrade ? "animate-spin" : ""}`}
+                />
+                {isDistributingLiveTrade
+                  ? "Distributing..."
+                  : "Run Live Trade Profits"}
               </button>
             </div>
           </div>
@@ -154,8 +217,12 @@ export default function ProfitDistributionPage() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Active Investments</p>
-                <p className="text-2xl font-bold text-gray-900">{activeInvestments.length}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Active Investments
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {activeInvestments.length}
+                </p>
               </div>
               <div className="p-3 bg-blue-50 rounded-lg">
                 <Users className="w-6 h-6 text-blue-600" />
@@ -171,9 +238,14 @@ export default function ProfitDistributionPage() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Investment Value</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Total Investment Value
+                </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  ${activeInvestments.reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}
+                  $
+                  {activeInvestments
+                    .reduce((sum, inv) => sum + inv.amount, 0)
+                    .toFixed(2)}
                 </p>
               </div>
               <div className="p-3 bg-green-50 rounded-lg">
@@ -190,9 +262,19 @@ export default function ProfitDistributionPage() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Daily Profit Pool</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Daily Profit Pool
+                </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  ${activeInvestments.reduce((sum, inv) => sum + calculateDailyProfit(inv.amount, inv.daily_profit_rate), 0).toFixed(2)}
+                  $
+                  {activeInvestments
+                    .reduce(
+                      (sum, inv) =>
+                        sum +
+                        calculateDailyProfit(inv.amount, inv.daily_profit_rate),
+                      0
+                    )
+                    .toFixed(2)}
                 </p>
               </div>
               <div className="p-3 bg-purple-50 rounded-lg">
@@ -209,9 +291,11 @@ export default function ProfitDistributionPage() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Last Distribution</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Last Distribution
+                </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {lastDistribution ? `${lastDistribution.processed}` : 'N/A'}
+                  {lastDistribution ? `${lastDistribution.processed}` : "N/A"}
                 </p>
               </div>
               <div className="p-3 bg-orange-50 rounded-lg">
@@ -228,22 +312,73 @@ export default function ProfitDistributionPage() {
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-xl shadow-lg p-6 mb-8"
           >
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Last Distribution Result</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Last Distribution Result
+            </h3>
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center p-4 bg-green-50 rounded-lg">
                 <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-green-600">{lastDistribution.processed}</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {lastDistribution.processed}
+                </p>
                 <p className="text-sm text-gray-600">Processed</p>
               </div>
               <div className="text-center p-4 bg-yellow-50 rounded-lg">
                 <Clock className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-yellow-600">{lastDistribution.skipped}</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {lastDistribution.skipped}
+                </p>
                 <p className="text-sm text-gray-600">Skipped</p>
               </div>
               <div className="text-center p-4 bg-red-50 rounded-lg">
                 <RefreshCw className="w-8 h-8 text-red-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-red-600">{lastDistribution.errors}</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {lastDistribution.errors}
+                </p>
                 <p className="text-sm text-gray-600">Errors</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Last Live Trade Distribution Result */}
+        {lastLiveTradeDistribution && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-xl shadow-lg p-6 mb-8"
+          >
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Last Live Trade Distribution Result
+            </h3>
+            <div className="grid grid-cols-4 gap-4">
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-green-600">
+                  {lastLiveTradeDistribution.processed}
+                </p>
+                <p className="text-sm text-gray-600">Processed</p>
+              </div>
+              <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                <Clock className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-yellow-600">
+                  {lastLiveTradeDistribution.skipped}
+                </p>
+                <p className="text-sm text-gray-600">Skipped</p>
+              </div>
+              <div className="text-center p-4 bg-red-50 rounded-lg">
+                <RefreshCw className="w-8 h-8 text-red-600 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-red-600">
+                  {lastLiveTradeDistribution.errors}
+                </p>
+                <p className="text-sm text-gray-600">Errors</p>
+              </div>
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <TrendingUp className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-blue-600">
+                  {lastLiveTradeDistribution.completed}
+                </p>
+                <p className="text-sm text-gray-600">Completed</p>
               </div>
             </div>
           </motion.div>
@@ -265,8 +400,12 @@ export default function ProfitDistributionPage() {
           {activeInvestments.length === 0 ? (
             <div className="text-center py-12">
               <TrendingUp className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Active Investments</h3>
-              <p className="text-gray-600">There are no active investments requiring profit distribution.</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No Active Investments
+              </h3>
+              <p className="text-gray-600">
+                There are no active investments requiring profit distribution.
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -316,7 +455,11 @@ export default function ProfitDistributionPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-green-600">
-                          ${calculateDailyProfit(investment.amount, investment.daily_profit_rate).toFixed(2)}
+                          $
+                          {calculateDailyProfit(
+                            investment.amount,
+                            investment.daily_profit_rate
+                          ).toFixed(2)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -325,12 +468,13 @@ export default function ProfitDistributionPage() {
                             <div
                               className="bg-blue-600 h-2 rounded-full"
                               style={{
-                                width: `${calculateProgress(investment.days_completed, investment.duration_days)}%`
+                                width: `${calculateProgress(investment.days_completed, investment.duration_days)}%`,
                               }}
                             ></div>
                           </div>
                           <span className="text-sm text-gray-600">
-                            {investment.days_completed}/{investment.duration_days}
+                            {investment.days_completed}/
+                            {investment.duration_days}
                           </span>
                         </div>
                       </td>

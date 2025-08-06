@@ -50,12 +50,12 @@ export async function PUT(
     await db.query("BEGIN");
 
     try {
-      // 1. Update live trade status to 'deactivated'
+      // 1. Update live trade status to 'cancelled' (temporary workaround until constraint is fixed)
       await db.query(
-        `UPDATE user_live_trades 
-         SET status = 'deactivated', 
+        `UPDATE user_live_trades
+         SET status = 'cancelled',
              end_time = CURRENT_TIMESTAMP,
-             updated_at = CURRENT_TIMESTAMP 
+             updated_at = CURRENT_TIMESTAMP
          WHERE id = $1`,
         [liveTradeId]
       );
@@ -71,7 +71,7 @@ export async function PUT(
           "admin_deduction", // Use supported transaction type
           0, // No amount change for deactivation
           "total", // Use supported balance type
-          `Live trade #${liveTradeId} deactivated by admin`,
+          `Live trade #${liveTradeId} deactivated by admin (status: cancelled)`,
           liveTradeId,
           "completed",
         ]
@@ -87,7 +87,7 @@ export async function PUT(
       return NextResponse.json({
         message: "Live trade deactivated successfully",
         liveTradeId,
-        status: "deactivated",
+        status: "cancelled",
       });
     } catch (error) {
       await db.query("ROLLBACK");
