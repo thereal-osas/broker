@@ -101,10 +101,10 @@ export async function POST(request: NextRequest) {
         amount,
       });
 
-      // Deduct from total balance
+      // Deduct from deposit balance (which will auto-update total_balance)
       await balanceQueries.updateBalance(
         session.user.id,
-        "total_balance",
+        "deposit_balance",
         amount,
         "subtract"
       );
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
         userId: session.user.id,
         type: "investment",
         amount,
-        balanceType: "total",
+        balanceType: "deposit",
         description: `Investment in ${plan.name}`,
         referenceId: investment.id,
         status: "completed",
@@ -126,7 +126,9 @@ export async function POST(request: NextRequest) {
         FROM referrals r
         WHERE r.referred_id = $1 AND r.status = 'active'
       `;
-      const referralResult = await client.query(referralQuery, [session.user.id]);
+      const referralResult = await client.query(referralQuery, [
+        session.user.id,
+      ]);
 
       if (referralResult.rows.length > 0) {
         const referral = referralResult.rows[0];
@@ -134,14 +136,19 @@ export async function POST(request: NextRequest) {
         const commissionAmount = amount * commissionRate;
 
         // Update referral commission
-        await client.query(`
+        await client.query(
+          `
           UPDATE referrals
           SET commission_earned = commission_earned + $1,
               total_commission = total_commission + $1
           WHERE id = $2
-        `, [commissionAmount, referral.id]);
+        `,
+          [commissionAmount, referral.id]
+        );
 
-        console.log(`Referral commission calculated: $${commissionAmount.toFixed(2)} for investment of $${amount}`);
+        console.log(
+          `Referral commission calculated: $${commissionAmount.toFixed(2)} for investment of $${amount}`
+        );
       }
 
       return { investment, transaction };
