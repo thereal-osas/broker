@@ -112,13 +112,13 @@ export class LiveTradeProfitService {
       // 3. Create transaction record
       const createTransactionQuery = `
         INSERT INTO transactions (
-          user_id, type, amount, balance_type, description, 
+          user_id, type, amount, balance_type, description,
           reference_id, status, created_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
       `;
       await db.query(createTransactionQuery, [
         liveTrade.user_id,
-        "live_trade_profit",
+        "profit", // Use supported transaction type
         profitAmount,
         "profit",
         `Hourly profit from live trade #${liveTrade.id}`,
@@ -198,8 +198,10 @@ export class LiveTradeProfitService {
 
         // Distribute profits for each elapsed hour that hasn't been processed
         for (let hour = 1; hour <= hoursElapsed; hour++) {
-          const profitHour = new Date(startTime.getTime() + hour * 60 * 60 * 1000);
-          
+          const profitHour = new Date(
+            startTime.getTime() + hour * 60 * 60 * 1000
+          );
+
           if (profitHour <= currentHour) {
             const alreadyDistributed = await this.isProfitDistributedForHour(
               liveTrade.id,
@@ -218,10 +220,7 @@ export class LiveTradeProfitService {
           }
         }
       } catch (error) {
-        console.error(
-          `Error processing live trade ${liveTrade.id}:`,
-          error
-        );
+        console.error(`Error processing live trade ${liveTrade.id}:`, error);
         errors++;
       }
     }

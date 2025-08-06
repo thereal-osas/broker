@@ -60,12 +60,12 @@ export async function DELETE(
         // Create refund transaction
         await db.query(
           `INSERT INTO transactions (
-             user_id, type, amount, balance_type, description, 
+             user_id, type, amount, balance_type, description,
              reference_id, status, created_at
            ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`,
           [
             liveTrade.user_id,
-            "live_trade_refund",
+            "admin_funding", // Use supported transaction type
             liveTrade.amount,
             "deposit",
             `Refund for deleted live trade #${liveTradeId}`,
@@ -89,14 +89,14 @@ export async function DELETE(
       // 4. Create deletion log transaction
       await db.query(
         `INSERT INTO transactions (
-           user_id, type, amount, balance_type, description, 
+           user_id, type, amount, balance_type, description,
            reference_id, status, created_at
          ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`,
         [
           liveTrade.user_id,
-          "live_trade_deletion",
+          "admin_deduction", // Use supported transaction type
           0, // No amount change for deletion log
-          "system",
+          "total", // Use supported balance type
           `Live trade #${liveTradeId} deleted by admin${liveTrade.status === "active" ? " (refunded)" : ""}`,
           liveTradeId,
           "completed",

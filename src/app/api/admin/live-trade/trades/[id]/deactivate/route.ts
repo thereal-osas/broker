@@ -63,14 +63,14 @@ export async function PUT(
       // 2. Create transaction record for the deactivation
       await db.query(
         `INSERT INTO transactions (
-           user_id, type, amount, balance_type, description, 
+           user_id, type, amount, balance_type, description,
            reference_id, status, created_at
          ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`,
         [
           liveTrade.user_id,
-          "live_trade_deactivation",
+          "admin_deduction", // Use supported transaction type
           0, // No amount change for deactivation
-          "system",
+          "total", // Use supported balance type
           `Live trade #${liveTradeId} deactivated by admin`,
           liveTradeId,
           "completed",
