@@ -113,9 +113,12 @@ export default function ProfitDistributionPage() {
   const runLiveTradeProfitDistribution = async () => {
     setIsDistributingLiveTrade(true);
     try {
-      const response = await fetch("/api/cron/calculate-live-trade-profits", {
-        method: "POST",
-      });
+      const response = await fetch(
+        "/api/admin/live-trade/profit-distribution",
+        {
+          method: "POST",
+        }
+      );
 
       if (response.ok) {
         const data = await response.json();

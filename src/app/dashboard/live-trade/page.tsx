@@ -12,7 +12,9 @@ import {
   Play,
   Pause,
   CheckCircle,
+  RefreshCw,
 } from "lucide-react";
+import LiveTradeProgressCard from "../../../components/LiveTradeProgressCard";
 import toast from "react-hot-toast";
 
 // Utility function to format currency without leading zeros
@@ -65,6 +67,7 @@ export default function UserLiveTradePage() {
   const [showInvestModal, setShowInvestModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<LiveTradePlan | null>(null);
   const [investAmount, setInvestAmount] = useState("");
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -74,6 +77,17 @@ export default function UserLiveTradePage() {
       return;
     }
   }, [session, status, router]);
+
+  // Auto-refresh live trades every 2 minutes for real-time updates
+  useEffect(() => {
+    if (!autoRefresh || !session?.user) return;
+
+    const interval = setInterval(() => {
+      fetchUserTrades();
+    }, 120000); // 2 minutes
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, session?.user]);
 
   const fetchPlans = async () => {
     try {
@@ -309,65 +323,31 @@ export default function UserLiveTradePage() {
           </div>
         )}
 
-        {/* User's Active Trades */}
+        {/* User's Live Trades with Enhanced Progress Tracking */}
         {userTrades.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              Your Live Trades
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">
+                Your Live Trades
+              </h2>
+              <button
+                onClick={() => {
+                  fetchUserTrades();
+                  toast.success("Live trades refreshed");
+                }}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>Refresh</span>
+              </button>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {userTrades.map((trade) => (
-                <div
+                <LiveTradeProgressCard
                   key={trade.id}
-                  className="bg-white rounded-lg shadow-md p-6"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {trade.plan_name}
-                    </h3>
-                    <div className="flex items-center space-x-1">
-                      {getStatusIcon(trade.status)}
-                      <span
-                        className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(trade.status)}`}
-                      >
-                        {trade.status}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Investment:</span>
-                      <span className="font-medium">
-                        ${formatCurrency(trade.amount)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Total Profit:</span>
-                      <span className="font-medium text-green-600">
-                        ${formatCurrency(trade.total_profit)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Hourly Rate:</span>
-                      <span className="font-medium">
-                        {((trade.hourly_profit_rate || 0) * 100).toFixed(2)}%
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Duration:</span>
-                      <span className="font-medium">
-                        {trade.duration_hours} hours
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Started:</span>
-                      <span className="font-medium">
-                        {new Date(trade.start_time).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                  trade={trade}
+                  onRefresh={fetchUserTrades}
+                />
               ))}
             </div>
           </div>
