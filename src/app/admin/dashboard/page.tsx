@@ -276,12 +276,21 @@ export default function AdminDashboard() {
                 <span className="text-gray-500">2 hours ago</span>
               </div>
               
-              <button
-                onClick={() => fetch('/api/cron/calculate-profits')}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Run Profit Calculation
-              </button>
+              <div className="space-y-2">
+                <button
+                  onClick={() => fetch('/api/cron/calculate-profits')}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Run Investment Profits
+                </button>
+
+                <button
+                  onClick={() => fetch('/api/cron/calculate-live-trade-profits')}
+                  className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Run Live Trade Profits
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>

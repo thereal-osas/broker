@@ -15,6 +15,11 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
+// Utility function to format currency without leading zeros
+const formatCurrency = (amount: number): string => {
+  return amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+};
+
 interface LiveTradePlan {
   id: string;
   name: string;
@@ -201,6 +206,75 @@ export default function UserLiveTradePage() {
           </div>
         </div>
 
+        {/* User Statistics */}
+        {userTrades.length > 0 && (
+          <div className="mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <Activity className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500">Active Trades</p>
+                    <p className="text-2xl font-semibold text-gray-900">
+                      {userTrades.filter(trade => trade.status === 'active').length}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <DollarSign className="h-8 w-8 text-indigo-600" />
+                  </div>
+                  <div className="ml-4 min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-500">Total Invested</p>
+                    <p className="text-2xl font-semibold text-gray-900 truncate">
+                      ${formatCurrency(
+                        userTrades
+                          .filter(trade => trade.status === 'active')
+                          .reduce((sum, trade) => sum + trade.amount, 0)
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <TrendingUp className="h-8 w-8 text-emerald-600" />
+                  </div>
+                  <div className="ml-4 min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-500">Total Profit</p>
+                    <p className="text-2xl font-semibold text-gray-900 truncate">
+                      ${formatCurrency(
+                        userTrades.reduce((sum, trade) => sum + trade.total_profit, 0)
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <CheckCircle className="h-8 w-8 text-green-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500">Completed</p>
+                    <p className="text-2xl font-semibold text-gray-900">
+                      {userTrades.filter(trade => trade.status === 'completed').length}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* User's Active Trades */}
         {userTrades.length > 0 && (
           <div className="mb-8">
@@ -223,12 +297,12 @@ export default function UserLiveTradePage() {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Investment:</span>
-                      <span className="font-medium">${trade.amount.toLocaleString()}</span>
+                      <span className="font-medium">${formatCurrency(trade.amount)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Total Profit:</span>
                       <span className="font-medium text-green-600">
-                        ${trade.total_profit.toLocaleString()}
+                        ${formatCurrency(trade.total_profit)}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">

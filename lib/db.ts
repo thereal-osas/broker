@@ -209,7 +209,7 @@ export const balanceQueries = {
     return result.rows[0];
   },
 
-  // Update specific balance type
+  // Update specific balance type and recalculate total
   async updateBalance(
     userId: string,
     balanceType: string,
@@ -217,14 +217,52 @@ export const balanceQueries = {
     operation: "add" | "subtract" = "add"
   ) {
     const operator = operation === "add" ? "+" : "-";
-    const query = `
-      UPDATE user_balances 
-      SET ${balanceType} = ${balanceType} ${operator} $2
+
+    // First update the specific balance type
+    const updateQuery = `
+      UPDATE user_balances
+      SET ${balanceType} = ${balanceType} ${operator} $2,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = $1
+    `;
+    await db.query(updateQuery, [userId, Math.abs(amount)]);
+
+    // Then recalculate and update total_balance
+    // Total balance = profit_balance + deposit_balance + bonus_balance + card_balance
+    // (credit_score_balance is excluded as it's a points system)
+    const recalculateQuery = `
+      UPDATE user_balances
+      SET total_balance = profit_balance + deposit_balance + bonus_balance + card_balance
       WHERE user_id = $1
       RETURNING *
     `;
-    const result = await db.query(query, [userId, Math.abs(amount)]);
+    const result = await db.query(recalculateQuery, [userId]);
     return result.rows[0];
+  },
+
+  // Recalculate total balance for a specific user
+  async recalculateUserTotalBalance(userId: string) {
+    const query = `
+      UPDATE user_balances
+      SET total_balance = profit_balance + deposit_balance + bonus_balance + card_balance,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = $1
+      RETURNING *
+    `;
+    const result = await db.query(query, [userId]);
+    return result.rows[0];
+  },
+
+  // Recalculate total balance for all users (maintenance function)
+  async recalculateAllTotalBalances() {
+    const query = `
+      UPDATE user_balances
+      SET total_balance = profit_balance + deposit_balance + bonus_balance + card_balance,
+          updated_at = CURRENT_TIMESTAMP
+      RETURNING user_id, total_balance
+    `;
+    const result = await db.query(query);
+    return result.rows;
   },
 };
 

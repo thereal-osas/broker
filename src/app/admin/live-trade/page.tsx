@@ -14,8 +14,14 @@ import {
   DollarSign,
   Clock,
   Activity,
+  Pause,
 } from "lucide-react";
 import toast from "react-hot-toast";
+
+// Utility function to format currency without leading zeros
+const formatCurrency = (amount: number): string => {
+  return amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+};
 
 interface LiveTradePlan {
   id: string;
@@ -305,6 +311,55 @@ export default function AdminLiveTradePage() {
     }
   };
 
+  const handleDeactivateLiveTrade = async (liveTradeId: string) => {
+    if (!confirm("Are you sure you want to deactivate this live trade?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/live-trade/trades/${liveTradeId}/deactivate`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        toast.success("Live trade deactivated successfully");
+        fetchAllData();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to deactivate live trade");
+      }
+    } catch (error) {
+      console.error("Error deactivating live trade:", error);
+      toast.error("An error occurred while deactivating the live trade");
+    }
+  };
+
+  const handleDeleteLiveTrade = async (liveTradeId: string) => {
+    if (!confirm("Are you sure you want to delete this live trade? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/live-trade/trades/${liveTradeId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        toast.success("Live trade deleted successfully");
+        fetchAllData();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to delete live trade");
+      }
+    } catch (error) {
+      console.error("Error deleting live trade:", error);
+      toast.error("An error occurred while deleting the live trade");
+    }
+  };
+
   if (status === "loading" || isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -383,10 +438,10 @@ export default function AdminLiveTradePage() {
               <div className="flex-shrink-0">
                 <DollarSign className="h-8 w-8 text-indigo-600" />
               </div>
-              <div className="ml-4">
+              <div className="ml-4 min-w-0 flex-1">
                 <p className="text-sm font-medium text-gray-500">Total Invested</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  ${stats.totalInvested.toLocaleString()}
+                <p className="text-2xl font-semibold text-gray-900 truncate">
+                  ${formatCurrency(stats.totalInvested)}
                 </p>
               </div>
             </div>
@@ -397,10 +452,10 @@ export default function AdminLiveTradePage() {
               <div className="flex-shrink-0">
                 <TrendingUp className="h-8 w-8 text-emerald-600" />
               </div>
-              <div className="ml-4">
+              <div className="ml-4 min-w-0 flex-1">
                 <p className="text-sm font-medium text-gray-500">Total Profits</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  ${stats.totalProfits.toLocaleString()}
+                <p className="text-2xl font-semibold text-gray-900 truncate">
+                  ${formatCurrency(stats.totalProfits)}
                 </p>
               </div>
             </div>
@@ -472,12 +527,12 @@ export default function AdminLiveTradePage() {
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Min Amount:</span>
-                      <span className="font-medium">${plan.min_amount.toLocaleString()}</span>
+                      <span className="font-medium">${formatCurrency(plan.min_amount)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Max Amount:</span>
                       <span className="font-medium">
-                        {plan.max_amount ? `$${plan.max_amount.toLocaleString()}` : 'No limit'}
+                        {plan.max_amount ? `$${formatCurrency(plan.max_amount)}` : 'No limit'}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
@@ -496,7 +551,7 @@ export default function AdminLiveTradePage() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Total Invested:</span>
-                      <span className="font-medium">${(plan.total_invested || 0).toLocaleString()}</span>
+                      <span className="font-medium">${formatCurrency(plan.total_invested || 0)}</span>
                     </div>
                   </div>
 
@@ -572,6 +627,9 @@ export default function AdminLiveTradePage() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Started
                       </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -594,7 +652,7 @@ export default function AdminLiveTradePage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${trade.amount.toLocaleString()}
+                          ${formatCurrency(trade.amount)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
@@ -610,13 +668,33 @@ export default function AdminLiveTradePage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${trade.total_profit.toLocaleString()}
+                          ${formatCurrency(trade.total_profit)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {trade.duration_hours} hours
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {new Date(trade.start_time).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
+                            {trade.status === 'active' && (
+                              <button
+                                onClick={() => handleDeactivateLiveTrade(trade.id)}
+                                className="text-yellow-600 hover:text-yellow-900 transition-colors"
+                                title="Deactivate Live Trade"
+                              >
+                                <Pause className="h-4 w-4" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteLiveTrade(trade.id)}
+                              className="text-red-600 hover:text-red-900 transition-colors"
+                              title="Delete Live Trade"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
