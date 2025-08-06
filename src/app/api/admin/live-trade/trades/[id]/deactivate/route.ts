@@ -5,19 +5,17 @@ import { db } from "@/lib/db";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session || session.user?.role !== "admin") {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const liveTradeId = params.id;
+    const resolvedParams = await params;
+    const liveTradeId = resolvedParams.id;
 
     if (!liveTradeId) {
       return NextResponse.json(
@@ -41,7 +39,7 @@ export async function PUT(
 
     const liveTrade = liveTradeCheck.rows[0];
 
-    if (liveTrade.status !== 'active') {
+    if (liveTrade.status !== "active") {
       return NextResponse.json(
         { error: "Live trade is not active" },
         { status: 400 }
@@ -80,7 +78,9 @@ export async function PUT(
       );
 
       // 3. Log the admin action
-      console.log(`Admin ${session.user.email} deactivated live trade ${liveTradeId} for user ${liveTrade.user_id}`);
+      console.log(
+        `Admin ${session.user.email} deactivated live trade ${liveTradeId} for user ${liveTrade.user_id}`
+      );
 
       await db.query("COMMIT");
 
@@ -89,12 +89,10 @@ export async function PUT(
         liveTradeId,
         status: "deactivated",
       });
-
     } catch (error) {
       await db.query("ROLLBACK");
       throw error;
     }
-
   } catch (error) {
     console.error("Error deactivating live trade:", error);
     return NextResponse.json(

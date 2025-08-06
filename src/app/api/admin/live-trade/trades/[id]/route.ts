@@ -5,19 +5,17 @@ import { db, balanceQueries } from "@/lib/db";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session || session.user?.role !== "admin") {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const liveTradeId = params.id;
+    const resolvedParams = await params;
+    const liveTradeId = resolvedParams.id;
 
     if (!liveTradeId) {
       return NextResponse.json(
@@ -50,7 +48,7 @@ export async function DELETE(
 
     try {
       // 1. If live trade is active, refund the investment amount to user's balance
-      if (liveTrade.status === 'active') {
+      if (liveTrade.status === "active") {
         // Add the investment amount back to user's total balance
         await balanceQueries.updateBalance(
           liveTrade.user_id,
@@ -84,10 +82,9 @@ export async function DELETE(
       );
 
       // 3. Delete the live trade
-      await db.query(
-        "DELETE FROM user_live_trades WHERE id = $1",
-        [liveTradeId]
-      );
+      await db.query("DELETE FROM user_live_trades WHERE id = $1", [
+        liveTradeId,
+      ]);
 
       // 4. Create deletion log transaction
       await db.query(
@@ -100,16 +97,20 @@ export async function DELETE(
           "live_trade_deletion",
           0, // No amount change for deletion log
           "system",
-          `Live trade #${liveTradeId} deleted by admin${liveTrade.status === 'active' ? ' (refunded)' : ''}`,
+          `Live trade #${liveTradeId} deleted by admin${liveTrade.status === "active" ? " (refunded)" : ""}`,
           liveTradeId,
           "completed",
         ]
       );
 
       // 5. Log the admin action
-      console.log(`Admin ${session.user.email} deleted live trade ${liveTradeId} for user ${liveTrade.first_name} ${liveTrade.last_name} (${liveTrade.email})`);
-      if (liveTrade.status === 'active') {
-        console.log(`Refunded $${liveTrade.amount} to user ${liveTrade.user_id}`);
+      console.log(
+        `Admin ${session.user.email} deleted live trade ${liveTradeId} for user ${liveTrade.first_name} ${liveTrade.last_name} (${liveTrade.email})`
+      );
+      if (liveTrade.status === "active") {
+        console.log(
+          `Refunded $${liveTrade.amount} to user ${liveTrade.user_id}`
+        );
       }
 
       await db.query("COMMIT");
@@ -117,15 +118,13 @@ export async function DELETE(
       return NextResponse.json({
         message: "Live trade deleted successfully",
         liveTradeId,
-        refunded: liveTrade.status === 'active',
-        refundAmount: liveTrade.status === 'active' ? liveTrade.amount : 0,
+        refunded: liveTrade.status === "active",
+        refundAmount: liveTrade.status === "active" ? liveTrade.amount : 0,
       });
-
     } catch (error) {
       await db.query("ROLLBACK");
       throw error;
     }
-
   } catch (error) {
     console.error("Error deleting live trade:", error);
     return NextResponse.json(
