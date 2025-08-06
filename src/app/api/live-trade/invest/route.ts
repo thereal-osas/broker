@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, balanceQueries } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   try {
@@ -83,13 +83,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Start transaction
-    await db.query('BEGIN');
+    await db.query("BEGIN");
 
     try {
-      // Deduct amount from user's balance in user_balances table
-      await db.query(
-        `UPDATE user_balances SET total_balance = total_balance - $1 WHERE user_id = $2`,
-        [amount, session.user.id]
+      // Deduct amount from user's deposit balance (which will auto-update total_balance)
+      await balanceQueries.updateBalance(
+        session.user.id,
+        "deposit_balance",
+        amount,
+        "subtract"
       );
 
       // Create live trade record
@@ -115,37 +117,35 @@ export async function POST(request: NextRequest) {
         ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
         [
           session.user.id,
-          'live_trade_investment',
+          "live_trade_investment",
           amount,
-          'total',
+          "deposit",
           `Live Trade Investment: ${plan.name}`,
-          'completed'
+          "completed",
         ]
       );
 
-      await db.query('COMMIT');
+      await db.query("COMMIT");
 
       return NextResponse.json({
         message: "Live trade started successfully",
         trade: result.rows[0],
       });
-
     } catch (error) {
-      await db.query('ROLLBACK');
+      await db.query("ROLLBACK");
       throw error;
     }
-
   } catch (error) {
     console.error("Error starting live trade:", error);
-    
+
     // Check if it's a table doesn't exist error
-    if (error instanceof Error && error.message.includes('does not exist')) {
+    if (error instanceof Error && error.message.includes("does not exist")) {
       return NextResponse.json(
         { error: "Live trade system not available. Please contact support." },
         { status: 503 }
       );
     }
-    
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

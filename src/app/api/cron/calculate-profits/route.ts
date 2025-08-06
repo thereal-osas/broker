@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, balanceQueries, transactionQueries } from "../../../../../lib/db";
-import { LiveTradeProfitService } from "@/lib/liveTradeProfit";
+// import { LiveTradeProfitService } from "@/lib/liveTradeProfit"; // Temporarily disabled
 
 export async function POST(request: NextRequest) {
   try {
@@ -112,8 +112,9 @@ export async function POST(request: NextRequest) {
     const completedCount = completedResult.rows.length;
 
     // Also run live trade profit distribution
-    console.log("Running live trade profit distribution...");
-    const liveTradeResult = await LiveTradeProfitService.runHourlyProfitDistribution();
+    // console.log("Running live trade profit distribution...");
+    // const liveTradeResult =
+    //   await LiveTradeProfitService.runHourlyProfitDistribution();
 
     return NextResponse.json({
       message: "Profit calculation completed",
@@ -121,8 +122,8 @@ export async function POST(request: NextRequest) {
         investmentsProcessed: processedCount,
         totalProfitDistributed: totalProfitDistributed.toFixed(2),
         investmentsCompleted: completedCount,
-        liveTradesProcessed: liveTradeResult.processed,
-        liveTradesCompleted: liveTradeResult.completed,
+        // liveTradesProcessed: liveTradeResult.processed,
+        // liveTradesCompleted: liveTradeResult.completed,
         date: today,
       },
     });
