@@ -16,8 +16,17 @@ import {
 import toast from "react-hot-toast";
 
 // Utility function to format currency without leading zeros
-const formatCurrency = (amount: number): string => {
-  return amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+const formatCurrency = (amount: number | string | null | undefined): string => {
+  // Convert to number and handle null/undefined/invalid values
+  const numAmount =
+    typeof amount === "number" ? amount : parseFloat(String(amount || 0));
+
+  // If still not a valid number, return "0.00"
+  if (isNaN(numAmount)) {
+    return "0.00";
+  }
+
+  return numAmount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 };
 
 interface LiveTradePlan {
@@ -106,7 +115,7 @@ export default function UserLiveTradePage() {
 
   const handleInvest = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedPlan) return;
 
     const amount = parseFloat(investAmount);
@@ -151,11 +160,11 @@ export default function UserLiveTradePage() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'active':
+      case "active":
         return <Activity className="w-4 h-4 text-green-600" />;
-      case 'completed':
+      case "completed":
         return <CheckCircle className="w-4 h-4 text-blue-600" />;
-      case 'cancelled':
+      case "cancelled":
         return <Pause className="w-4 h-4 text-red-600" />;
       default:
         return <Clock className="w-4 h-4 text-gray-600" />;
@@ -164,14 +173,14 @@ export default function UserLiveTradePage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'completed':
-        return 'bg-blue-100 text-blue-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
+      case "active":
+        return "bg-green-100 text-green-800";
+      case "completed":
+        return "bg-blue-100 text-blue-800";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -216,9 +225,14 @@ export default function UserLiveTradePage() {
                     <Activity className="h-8 w-8 text-blue-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">Active Trades</p>
+                    <p className="text-sm font-medium text-gray-500">
+                      Active Trades
+                    </p>
                     <p className="text-2xl font-semibold text-gray-900">
-                      {userTrades.filter(trade => trade.status === 'active').length}
+                      {
+                        userTrades.filter((trade) => trade.status === "active")
+                          .length
+                      }
                     </p>
                   </div>
                 </div>
@@ -230,12 +244,19 @@ export default function UserLiveTradePage() {
                     <DollarSign className="h-8 w-8 text-indigo-600" />
                   </div>
                   <div className="ml-4 min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-500">Total Invested</p>
+                    <p className="text-sm font-medium text-gray-500">
+                      Total Invested
+                    </p>
                     <p className="text-2xl font-semibold text-gray-900 truncate">
-                      ${formatCurrency(
+                      $
+                      {formatCurrency(
                         userTrades
-                          .filter(trade => trade.status === 'active')
-                          .reduce((sum, trade) => sum + trade.amount, 0)
+                          .filter((trade) => trade.status === "active")
+                          .reduce(
+                            (sum, trade) =>
+                              sum + parseFloat(String(trade.amount || 0)),
+                            0
+                          )
                       )}
                     </p>
                   </div>
@@ -248,10 +269,17 @@ export default function UserLiveTradePage() {
                     <TrendingUp className="h-8 w-8 text-emerald-600" />
                   </div>
                   <div className="ml-4 min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-500">Total Profit</p>
+                    <p className="text-sm font-medium text-gray-500">
+                      Total Profit
+                    </p>
                     <p className="text-2xl font-semibold text-gray-900 truncate">
-                      ${formatCurrency(
-                        userTrades.reduce((sum, trade) => sum + trade.total_profit, 0)
+                      $
+                      {formatCurrency(
+                        userTrades.reduce(
+                          (sum, trade) =>
+                            sum + parseFloat(String(trade.total_profit || 0)),
+                          0
+                        )
                       )}
                     </p>
                   </div>
@@ -264,9 +292,15 @@ export default function UserLiveTradePage() {
                     <CheckCircle className="h-8 w-8 text-green-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">Completed</p>
+                    <p className="text-sm font-medium text-gray-500">
+                      Completed
+                    </p>
                     <p className="text-2xl font-semibold text-gray-900">
-                      {userTrades.filter(trade => trade.status === 'completed').length}
+                      {
+                        userTrades.filter(
+                          (trade) => trade.status === "completed"
+                        ).length
+                      }
                     </p>
                   </div>
                 </div>
@@ -278,12 +312,19 @@ export default function UserLiveTradePage() {
         {/* User's Active Trades */}
         {userTrades.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Your Live Trades</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Your Live Trades
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {userTrades.map((trade) => (
-                <div key={trade.id} className="bg-white rounded-lg shadow-md p-6">
+                <div
+                  key={trade.id}
+                  className="bg-white rounded-lg shadow-md p-6"
+                >
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">{trade.plan_name}</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {trade.plan_name}
+                    </h3>
                     <div className="flex items-center space-x-1">
                       {getStatusIcon(trade.status)}
                       <span
@@ -293,11 +334,13 @@ export default function UserLiveTradePage() {
                       </span>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Investment:</span>
-                      <span className="font-medium">${formatCurrency(trade.amount)}</span>
+                      <span className="font-medium">
+                        ${formatCurrency(trade.amount)}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Total Profit:</span>
@@ -308,12 +351,14 @@ export default function UserLiveTradePage() {
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Hourly Rate:</span>
                       <span className="font-medium">
-                        {(trade.hourly_profit_rate * 100).toFixed(2)}%
+                        {((trade.hourly_profit_rate || 0) * 100).toFixed(2)}%
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Duration:</span>
-                      <span className="font-medium">{trade.duration_hours} hours</span>
+                      <span className="font-medium">
+                        {trade.duration_hours} hours
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Started:</span>
@@ -330,35 +375,45 @@ export default function UserLiveTradePage() {
 
         {/* Available Plans */}
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Available Live Trade Plans</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Available Live Trade Plans
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {plans.map((plan) => (
               <div key={plan.id} className="bg-white rounded-lg shadow-md p-6">
                 <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{plan.name}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {plan.name}
+                  </h3>
                   <p className="text-gray-600 text-sm">{plan.description}</p>
                 </div>
-                
+
                 <div className="space-y-2 mb-6">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Min Amount:</span>
-                    <span className="font-medium">${plan.min_amount.toLocaleString()}</span>
+                    <span className="font-medium">
+                      ${plan.min_amount.toLocaleString()}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Max Amount:</span>
                     <span className="font-medium">
-                      {plan.max_amount ? `$${plan.max_amount.toLocaleString()}` : 'No limit'}
+                      {plan.max_amount
+                        ? `$${plan.max_amount.toLocaleString()}`
+                        : "No limit"}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Hourly Rate:</span>
                     <span className="font-medium text-green-600">
-                      {(plan.hourly_profit_rate * 100).toFixed(2)}%
+                      {((plan.hourly_profit_rate || 0) * 100).toFixed(2)}%
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Duration:</span>
-                    <span className="font-medium">{plan.duration_hours} hours</span>
+                    <span className="font-medium">
+                      {plan.duration_hours} hours
+                    </span>
                   </div>
                 </div>
 
@@ -382,7 +437,7 @@ export default function UserLiveTradePage() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Start Live Trade: {selectedPlan.name}
                 </h3>
-                
+
                 <form onSubmit={handleInvest} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -401,28 +456,43 @@ export default function UserLiveTradePage() {
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       Min: ${selectedPlan.min_amount.toLocaleString()}
-                      {selectedPlan.max_amount && ` | Max: $${selectedPlan.max_amount.toLocaleString()}`}
+                      {selectedPlan.max_amount &&
+                        ` | Max: $${selectedPlan.max_amount.toLocaleString()}`}
                     </p>
                   </div>
 
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-gray-900 mb-2">Trade Details</h4>
+                    <h4 className="font-medium text-gray-900 mb-2">
+                      Trade Details
+                    </h4>
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-500">Hourly Rate:</span>
                         <span className="font-medium text-green-600">
-                          {(selectedPlan.hourly_profit_rate * 100).toFixed(2)}%
+                          {(
+                            (selectedPlan.hourly_profit_rate || 0) * 100
+                          ).toFixed(2)}
+                          %
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Duration:</span>
-                        <span className="font-medium">{selectedPlan.duration_hours} hours</span>
+                        <span className="font-medium">
+                          {selectedPlan.duration_hours} hours
+                        </span>
                       </div>
                       {investAmount && (
                         <div className="flex justify-between border-t pt-2 mt-2">
-                          <span className="text-gray-500">Expected Total Profit:</span>
+                          <span className="text-gray-500">
+                            Expected Total Profit:
+                          </span>
                           <span className="font-medium text-green-600">
-                            ${(parseFloat(investAmount) * selectedPlan.hourly_profit_rate * selectedPlan.duration_hours).toFixed(2)}
+                            $
+                            {(
+                              (parseFloat(investAmount) || 0) *
+                              (selectedPlan.hourly_profit_rate || 0) *
+                              (selectedPlan.duration_hours || 0)
+                            ).toFixed(2)}
                           </span>
                         </div>
                       )}

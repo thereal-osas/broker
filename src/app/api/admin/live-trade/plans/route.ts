@@ -37,7 +37,18 @@ export async function GET(request: NextRequest) {
 
     const result = await db.query(query);
 
-    return NextResponse.json(result.rows);
+    // Ensure numeric fields are properly converted
+    const processedRows = result.rows.map((row) => ({
+      ...row,
+      min_amount: parseFloat(row.min_amount || 0),
+      max_amount: row.max_amount ? parseFloat(row.max_amount) : null,
+      hourly_profit_rate: parseFloat(row.hourly_profit_rate || 0),
+      duration_hours: parseInt(row.duration_hours || 0),
+      active_trades: parseInt(row.active_trades || 0),
+      total_invested: parseFloat(row.total_invested || 0),
+    }));
+
+    return NextResponse.json(processedRows);
   } catch (error) {
     console.error("Error fetching live trade plans:", error);
     return NextResponse.json(
@@ -126,15 +137,23 @@ export async function POST(request: NextRequest) {
     console.error("Error creating live trade plan:", error);
 
     // Check if it's a table doesn't exist error
-    if (error instanceof Error && error.message.includes('relation "live_trade_plans" does not exist')) {
+    if (
+      error instanceof Error &&
+      error.message.includes('relation "live_trade_plans" does not exist')
+    ) {
       return NextResponse.json(
-        { error: "Live trade tables not found. Please run the database migration script first." },
+        {
+          error:
+            "Live trade tables not found. Please run the database migration script first.",
+        },
         { status: 500 }
       );
     }
 
     return NextResponse.json(
-      { error: `Internal server error: ${error instanceof Error ? error.message : 'Unknown error'}` },
+      {
+        error: `Internal server error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      },
       { status: 500 }
     );
   }

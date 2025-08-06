@@ -22,18 +22,30 @@ export async function GET(request: NextRequest) {
 
     const result = await db.query(query);
 
-    return NextResponse.json(result.rows);
+    // Ensure numeric fields are properly converted
+    const processedRows = result.rows.map((row) => ({
+      ...row,
+      min_amount: parseFloat(row.min_amount || 0),
+      max_amount: row.max_amount ? parseFloat(row.max_amount) : null,
+      hourly_profit_rate: parseFloat(row.hourly_profit_rate || 0),
+      duration_hours: parseInt(row.duration_hours || 0),
+    }));
+
+    return NextResponse.json(processedRows);
   } catch (error) {
     console.error("Error fetching live trade plans:", error);
-    
+
     // Check if it's a table doesn't exist error
-    if (error instanceof Error && error.message.includes('relation "live_trade_plans" does not exist')) {
+    if (
+      error instanceof Error &&
+      error.message.includes('relation "live_trade_plans" does not exist')
+    ) {
       return NextResponse.json(
         { error: "Live trade system not available. Please contact support." },
         { status: 503 }
       );
     }
-    
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

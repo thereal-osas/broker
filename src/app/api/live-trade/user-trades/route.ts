@@ -28,18 +28,27 @@ export async function GET(request: NextRequest) {
 
     const result = await db.query(query, [session.user.id]);
 
-    return NextResponse.json(result.rows);
+    // Ensure numeric fields are properly converted
+    const processedRows = result.rows.map((row) => ({
+      ...row,
+      amount: parseFloat(row.amount || 0),
+      total_profit: parseFloat(row.total_profit || 0),
+      hourly_profit_rate: parseFloat(row.hourly_profit_rate || 0),
+      duration_hours: parseInt(row.duration_hours || 0),
+    }));
+
+    return NextResponse.json(processedRows);
   } catch (error) {
     console.error("Error fetching user live trades:", error);
-    
+
     // Check if it's a table doesn't exist error
-    if (error instanceof Error && error.message.includes('does not exist')) {
+    if (error instanceof Error && error.message.includes("does not exist")) {
       return NextResponse.json(
         { error: "Live trade system not available. Please contact support." },
         { status: 503 }
       );
     }
-    
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

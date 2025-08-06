@@ -19,8 +19,17 @@ import {
 import toast from "react-hot-toast";
 
 // Utility function to format currency without leading zeros
-const formatCurrency = (amount: number): string => {
-  return amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+const formatCurrency = (amount: number | string | null | undefined): string => {
+  // Convert to number and handle null/undefined/invalid values
+  const numAmount =
+    typeof amount === "number" ? amount : parseFloat(String(amount || 0));
+
+  // If still not a valid number, return "0.00"
+  if (isNaN(numAmount)) {
+    return "0.00";
+  }
+
+  return numAmount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 };
 
 interface LiveTradePlan {
@@ -82,11 +91,11 @@ export default function AdminLiveTradePage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<LiveTradePlan | null>(null);
-  const [activeTab, setActiveTab] = useState<'plans' | 'trades'>('plans');
+  const [activeTab, setActiveTab] = useState<"plans" | "trades">("plans");
 
   const [planForm, setPlanForm] = useState({
-    name: '',
-    description: '',
+    name: "",
+    description: "",
     min_amount: 0,
     max_amount: 0,
     hourly_profit_rate: 0,
@@ -103,29 +112,39 @@ export default function AdminLiveTradePage() {
     }
   }, [session, status, router]);
 
-  const updateStats = useCallback((plansData: LiveTradePlan[], tradesData: UserLiveTrade[]) => {
-    const totalPlans = plansData.length;
-    const activePlans = plansData.filter(plan => plan.is_active).length;
-    const totalTrades = tradesData.length;
-    const activeTrades = tradesData.filter(trade => trade.status === 'active').length;
-    const totalInvested = tradesData
-      .filter(trade => trade.status === 'active')
-      .reduce((sum, trade) => sum + trade.amount, 0);
-    const totalProfits = tradesData.reduce((sum, trade) => sum + trade.total_profit, 0);
+  const updateStats = useCallback(
+    (plansData: LiveTradePlan[], tradesData: UserLiveTrade[]) => {
+      const totalPlans = plansData.length;
+      const activePlans = plansData.filter((plan) => plan.is_active).length;
+      const totalTrades = tradesData.length;
+      const activeTrades = tradesData.filter(
+        (trade) => trade.status === "active"
+      ).length;
+      const totalInvested = tradesData
+        .filter((trade) => trade.status === "active")
+        .reduce((sum, trade) => sum + trade.amount, 0);
+      const totalProfits = tradesData.reduce(
+        (sum, trade) => sum + trade.total_profit,
+        0
+      );
 
-    setStats({
-      totalPlans,
-      activePlans,
-      totalTrades,
-      activeTrades,
-      totalInvested,
-      totalProfits,
-    });
-  }, []);
+      setStats({
+        totalPlans,
+        activePlans,
+        totalTrades,
+        activeTrades,
+        totalInvested,
+        totalProfits,
+      });
+    },
+    []
+  );
 
   const fetchPlans = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/live-trade/plans?includeStats=true");
+      const response = await fetch(
+        "/api/admin/live-trade/plans?includeStats=true"
+      );
       if (response.ok) {
         const data = await response.json();
         setPlans(data);
@@ -175,8 +194,8 @@ export default function AdminLiveTradePage() {
 
   const resetForm = () => {
     setPlanForm({
-      name: '',
-      description: '',
+      name: "",
+      description: "",
       min_amount: 0,
       max_amount: 0,
       hourly_profit_rate: 0,
@@ -206,7 +225,7 @@ export default function AdminLiveTradePage() {
 
   const handleCreatePlan = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const response = await fetch("/api/admin/live-trade/plans", {
         method: "POST",
@@ -233,17 +252,20 @@ export default function AdminLiveTradePage() {
 
   const handleEditPlan = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedPlan) return;
 
     try {
-      const response = await fetch(`/api/admin/live-trade/plans/${selectedPlan.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(planForm),
-      });
+      const response = await fetch(
+        `/api/admin/live-trade/plans/${selectedPlan.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(planForm),
+        }
+      );
 
       if (response.ok) {
         toast.success("Live trade plan updated successfully");
@@ -276,7 +298,9 @@ export default function AdminLiveTradePage() {
       });
 
       if (response.ok) {
-        toast.success(`Plan ${!plan.is_active ? 'activated' : 'deactivated'} successfully`);
+        toast.success(
+          `Plan ${!plan.is_active ? "activated" : "deactivated"} successfully`
+        );
         fetchAllData();
       } else {
         const errorData = await response.json();
@@ -289,7 +313,11 @@ export default function AdminLiveTradePage() {
   };
 
   const deletePlan = async (plan: LiveTradePlan) => {
-    if (!confirm(`Are you sure you want to delete "${plan.name}"? This action cannot be undone.`)) {
+    if (
+      !confirm(
+        `Are you sure you want to delete "${plan.name}"? This action cannot be undone.`
+      )
+    ) {
       return;
     }
 
@@ -317,12 +345,15 @@ export default function AdminLiveTradePage() {
     }
 
     try {
-      const response = await fetch(`/api/admin/live-trade/trades/${liveTradeId}/deactivate`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await fetch(
+        `/api/admin/live-trade/trades/${liveTradeId}/deactivate`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (response.ok) {
         toast.success("Live trade deactivated successfully");
@@ -338,14 +369,21 @@ export default function AdminLiveTradePage() {
   };
 
   const handleDeleteLiveTrade = async (liveTradeId: string) => {
-    if (!confirm("Are you sure you want to delete this live trade? This action cannot be undone.")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this live trade? This action cannot be undone."
+      )
+    ) {
       return;
     }
 
     try {
-      const response = await fetch(`/api/admin/live-trade/trades/${liveTradeId}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `/api/admin/live-trade/trades/${liveTradeId}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (response.ok) {
         toast.success("Live trade deleted successfully");
@@ -377,7 +415,9 @@ export default function AdminLiveTradePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Live Trade Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Live Trade Management
+          </h1>
           <p className="mt-2 text-gray-600">
             Manage live trading plans and monitor user trading activities
           </p>
@@ -392,7 +432,9 @@ export default function AdminLiveTradePage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">Total Plans</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalPlans}</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {stats.totalPlans}
+                </p>
               </div>
             </div>
           </div>
@@ -403,8 +445,12 @@ export default function AdminLiveTradePage() {
                 <Activity className="h-8 w-8 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Active Plans</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.activePlans}</p>
+                <p className="text-sm font-medium text-gray-500">
+                  Active Plans
+                </p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {stats.activePlans}
+                </p>
               </div>
             </div>
           </div>
@@ -415,8 +461,12 @@ export default function AdminLiveTradePage() {
                 <Users className="h-8 w-8 text-purple-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Total Trades</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalTrades}</p>
+                <p className="text-sm font-medium text-gray-500">
+                  Total Trades
+                </p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {stats.totalTrades}
+                </p>
               </div>
             </div>
           </div>
@@ -427,8 +477,12 @@ export default function AdminLiveTradePage() {
                 <Clock className="h-8 w-8 text-orange-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Active Trades</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.activeTrades}</p>
+                <p className="text-sm font-medium text-gray-500">
+                  Active Trades
+                </p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {stats.activeTrades}
+                </p>
               </div>
             </div>
           </div>
@@ -439,7 +493,9 @@ export default function AdminLiveTradePage() {
                 <DollarSign className="h-8 w-8 text-indigo-600" />
               </div>
               <div className="ml-4 min-w-0 flex-1">
-                <p className="text-sm font-medium text-gray-500">Total Invested</p>
+                <p className="text-sm font-medium text-gray-500">
+                  Total Invested
+                </p>
                 <p className="text-2xl font-semibold text-gray-900 truncate">
                   ${formatCurrency(stats.totalInvested)}
                 </p>
@@ -453,7 +509,9 @@ export default function AdminLiveTradePage() {
                 <TrendingUp className="h-8 w-8 text-emerald-600" />
               </div>
               <div className="ml-4 min-w-0 flex-1">
-                <p className="text-sm font-medium text-gray-500">Total Profits</p>
+                <p className="text-sm font-medium text-gray-500">
+                  Total Profits
+                </p>
                 <p className="text-2xl font-semibold text-gray-900 truncate">
                   ${formatCurrency(stats.totalProfits)}
                 </p>
@@ -467,21 +525,21 @@ export default function AdminLiveTradePage() {
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
               <button
-                onClick={() => setActiveTab('plans')}
+                onClick={() => setActiveTab("plans")}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'plans'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  activeTab === "plans"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
                 Live Trade Plans ({plans.length})
               </button>
               <button
-                onClick={() => setActiveTab('trades')}
+                onClick={() => setActiveTab("trades")}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'trades'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  activeTab === "trades"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
                 User Trades ({userTrades.length})
@@ -491,11 +549,13 @@ export default function AdminLiveTradePage() {
         </div>
 
         {/* Plans Tab */}
-        {activeTab === 'plans' && (
+        {activeTab === "plans" && (
           <div>
             {/* Create Plan Button */}
             <div className="mb-6 flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-900">Live Trade Plans</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Live Trade Plans
+              </h2>
               <button
                 onClick={openCreateModal}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
@@ -508,50 +568,67 @@ export default function AdminLiveTradePage() {
             {/* Plans Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {plans.map((plan) => (
-                <div key={plan.id} className="bg-white rounded-lg shadow-md p-6">
+                <div
+                  key={plan.id}
+                  className="bg-white rounded-lg shadow-md p-6"
+                >
                   <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">{plan.name}</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {plan.name}
+                    </h3>
                     <span
                       className={`px-2 py-1 text-xs font-semibold rounded-full ${
                         plan.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
                       }`}
                     >
-                      {plan.is_active ? 'Active' : 'Inactive'}
+                      {plan.is_active ? "Active" : "Inactive"}
                     </span>
                   </div>
 
-                  <p className="text-gray-600 text-sm mb-4">{plan.description}</p>
+                  <p className="text-gray-600 text-sm mb-4">
+                    {plan.description}
+                  </p>
 
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Min Amount:</span>
-                      <span className="font-medium">${formatCurrency(plan.min_amount)}</span>
+                      <span className="font-medium">
+                        ${formatCurrency(plan.min_amount)}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Max Amount:</span>
                       <span className="font-medium">
-                        {plan.max_amount ? `$${formatCurrency(plan.max_amount)}` : 'No limit'}
+                        {plan.max_amount
+                          ? `$${formatCurrency(plan.max_amount)}`
+                          : "No limit"}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Hourly Rate:</span>
                       <span className="font-medium text-green-600">
-                        {(plan.hourly_profit_rate * 100).toFixed(2)}%
+                        {((plan.hourly_profit_rate || 0) * 100).toFixed(2)}%
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Duration:</span>
-                      <span className="font-medium">{plan.duration_hours} hours</span>
+                      <span className="font-medium">
+                        {plan.duration_hours} hours
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Active Trades:</span>
-                      <span className="font-medium">{plan.active_trades || 0}</span>
+                      <span className="font-medium">
+                        {plan.active_trades || 0}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Total Invested:</span>
-                      <span className="font-medium">${formatCurrency(plan.total_invested || 0)}</span>
+                      <span className="font-medium">
+                        ${formatCurrency(plan.total_invested || 0)}
+                      </span>
                     </div>
                   </div>
 
@@ -567,8 +644,8 @@ export default function AdminLiveTradePage() {
                       onClick={() => togglePlanStatus(plan)}
                       className={`flex-1 px-3 py-2 rounded-lg flex items-center justify-center space-x-1 transition-colors ${
                         plan.is_active
-                          ? 'bg-yellow-50 hover:bg-yellow-100 text-yellow-600'
-                          : 'bg-green-50 hover:bg-green-100 text-green-600'
+                          ? "bg-yellow-50 hover:bg-yellow-100 text-yellow-600"
+                          : "bg-green-50 hover:bg-green-100 text-green-600"
                       }`}
                     >
                       {plan.is_active ? (
@@ -597,9 +674,11 @@ export default function AdminLiveTradePage() {
         )}
 
         {/* Trades Tab */}
-        {activeTab === 'trades' && (
+        {activeTab === "trades" && (
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">User Live Trades</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              User Live Trades
+            </h2>
 
             <div className="bg-white rounded-lg shadow overflow-hidden">
               <div className="overflow-x-auto">
@@ -646,9 +725,12 @@ export default function AdminLiveTradePage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{trade.plan_name}</div>
+                          <div className="text-sm text-gray-900">
+                            {trade.plan_name}
+                          </div>
                           <div className="text-sm text-gray-500">
-                            {(trade.hourly_profit_rate * 100).toFixed(2)}% hourly
+                            {((trade.hourly_profit_rate || 0) * 100).toFixed(2)}
+                            % hourly
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -657,11 +739,11 @@ export default function AdminLiveTradePage() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              trade.status === 'active'
-                                ? 'bg-green-100 text-green-800'
-                                : trade.status === 'completed'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-red-100 text-red-800'
+                              trade.status === "active"
+                                ? "bg-green-100 text-green-800"
+                                : trade.status === "completed"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-red-100 text-red-800"
                             }`}
                           >
                             {trade.status}
@@ -678,9 +760,11 @@ export default function AdminLiveTradePage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex space-x-2">
-                            {trade.status === 'active' && (
+                            {trade.status === "active" && (
                               <button
-                                onClick={() => handleDeactivateLiveTrade(trade.id)}
+                                onClick={() =>
+                                  handleDeactivateLiveTrade(trade.id)
+                                }
                                 className="text-yellow-600 hover:text-yellow-900 transition-colors"
                                 title="Deactivate Live Trade"
                               >
@@ -722,7 +806,12 @@ export default function AdminLiveTradePage() {
                     <input
                       type="text"
                       value={planForm.name}
-                      onChange={(e) => setPlanForm(prev => ({ ...prev, name: e.target.value }))}
+                      onChange={(e) =>
+                        setPlanForm((prev) => ({
+                          ...prev,
+                          name: e.target.value,
+                        }))
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter plan name"
                       required
@@ -735,7 +824,12 @@ export default function AdminLiveTradePage() {
                     </label>
                     <textarea
                       value={planForm.description}
-                      onChange={(e) => setPlanForm(prev => ({ ...prev, description: e.target.value }))}
+                      onChange={(e) =>
+                        setPlanForm((prev) => ({
+                          ...prev,
+                          description: e.target.value,
+                        }))
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       rows={3}
                       placeholder="Enter plan description"
@@ -751,7 +845,12 @@ export default function AdminLiveTradePage() {
                       <input
                         type="number"
                         value={planForm.min_amount}
-                        onChange={(e) => setPlanForm(prev => ({ ...prev, min_amount: parseFloat(e.target.value) || 0 }))}
+                        onChange={(e) =>
+                          setPlanForm((prev) => ({
+                            ...prev,
+                            min_amount: parseFloat(e.target.value) || 0,
+                          }))
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         min="0"
                         step="0.01"
@@ -766,7 +865,12 @@ export default function AdminLiveTradePage() {
                       <input
                         type="number"
                         value={planForm.max_amount}
-                        onChange={(e) => setPlanForm(prev => ({ ...prev, max_amount: parseFloat(e.target.value) || 0 }))}
+                        onChange={(e) =>
+                          setPlanForm((prev) => ({
+                            ...prev,
+                            max_amount: parseFloat(e.target.value) || 0,
+                          }))
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         min="0"
                         step="0.01"
@@ -783,7 +887,12 @@ export default function AdminLiveTradePage() {
                       <input
                         type="number"
                         value={planForm.hourly_profit_rate}
-                        onChange={(e) => setPlanForm(prev => ({ ...prev, hourly_profit_rate: parseFloat(e.target.value) || 0 }))}
+                        onChange={(e) =>
+                          setPlanForm((prev) => ({
+                            ...prev,
+                            hourly_profit_rate: parseFloat(e.target.value) || 0,
+                          }))
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         min="0"
                         step="0.01"
@@ -798,7 +907,12 @@ export default function AdminLiveTradePage() {
                       <input
                         type="number"
                         value={planForm.duration_hours}
-                        onChange={(e) => setPlanForm(prev => ({ ...prev, duration_hours: parseInt(e.target.value) || 0 }))}
+                        onChange={(e) =>
+                          setPlanForm((prev) => ({
+                            ...prev,
+                            duration_hours: parseInt(e.target.value) || 0,
+                          }))
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         min="1"
                         required
@@ -811,10 +925,18 @@ export default function AdminLiveTradePage() {
                       type="checkbox"
                       id="is_active"
                       checked={planForm.is_active}
-                      onChange={(e) => setPlanForm(prev => ({ ...prev, is_active: e.target.checked }))}
+                      onChange={(e) =>
+                        setPlanForm((prev) => ({
+                          ...prev,
+                          is_active: e.target.checked,
+                        }))
+                      }
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
-                    <label htmlFor="is_active" className="ml-2 block text-sm text-gray-900">
+                    <label
+                      htmlFor="is_active"
+                      className="ml-2 block text-sm text-gray-900"
+                    >
                       Active plan
                     </label>
                   </div>
@@ -857,7 +979,12 @@ export default function AdminLiveTradePage() {
                     <input
                       type="text"
                       value={planForm.name}
-                      onChange={(e) => setPlanForm(prev => ({ ...prev, name: e.target.value }))}
+                      onChange={(e) =>
+                        setPlanForm((prev) => ({
+                          ...prev,
+                          name: e.target.value,
+                        }))
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
                     />
@@ -869,7 +996,12 @@ export default function AdminLiveTradePage() {
                     </label>
                     <textarea
                       value={planForm.description}
-                      onChange={(e) => setPlanForm(prev => ({ ...prev, description: e.target.value }))}
+                      onChange={(e) =>
+                        setPlanForm((prev) => ({
+                          ...prev,
+                          description: e.target.value,
+                        }))
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       rows={3}
                       required
@@ -884,7 +1016,12 @@ export default function AdminLiveTradePage() {
                       <input
                         type="number"
                         value={planForm.min_amount}
-                        onChange={(e) => setPlanForm(prev => ({ ...prev, min_amount: parseFloat(e.target.value) || 0 }))}
+                        onChange={(e) =>
+                          setPlanForm((prev) => ({
+                            ...prev,
+                            min_amount: parseFloat(e.target.value) || 0,
+                          }))
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         min="0"
                         step="0.01"
@@ -899,7 +1036,12 @@ export default function AdminLiveTradePage() {
                       <input
                         type="number"
                         value={planForm.max_amount}
-                        onChange={(e) => setPlanForm(prev => ({ ...prev, max_amount: parseFloat(e.target.value) || 0 }))}
+                        onChange={(e) =>
+                          setPlanForm((prev) => ({
+                            ...prev,
+                            max_amount: parseFloat(e.target.value) || 0,
+                          }))
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         min="0"
                         step="0.01"
@@ -915,7 +1057,12 @@ export default function AdminLiveTradePage() {
                       <input
                         type="number"
                         value={planForm.hourly_profit_rate}
-                        onChange={(e) => setPlanForm(prev => ({ ...prev, hourly_profit_rate: parseFloat(e.target.value) || 0 }))}
+                        onChange={(e) =>
+                          setPlanForm((prev) => ({
+                            ...prev,
+                            hourly_profit_rate: parseFloat(e.target.value) || 0,
+                          }))
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         min="0"
                         step="0.01"
@@ -930,7 +1077,12 @@ export default function AdminLiveTradePage() {
                       <input
                         type="number"
                         value={planForm.duration_hours}
-                        onChange={(e) => setPlanForm(prev => ({ ...prev, duration_hours: parseInt(e.target.value) || 0 }))}
+                        onChange={(e) =>
+                          setPlanForm((prev) => ({
+                            ...prev,
+                            duration_hours: parseInt(e.target.value) || 0,
+                          }))
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         min="1"
                         required
@@ -943,10 +1095,18 @@ export default function AdminLiveTradePage() {
                       type="checkbox"
                       id="edit_is_active"
                       checked={planForm.is_active}
-                      onChange={(e) => setPlanForm(prev => ({ ...prev, is_active: e.target.checked }))}
+                      onChange={(e) =>
+                        setPlanForm((prev) => ({
+                          ...prev,
+                          is_active: e.target.checked,
+                        }))
+                      }
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
-                    <label htmlFor="edit_is_active" className="ml-2 block text-sm text-gray-900">
+                    <label
+                      htmlFor="edit_is_active"
+                      className="ml-2 block text-sm text-gray-900"
+                    >
                       Active plan
                     </label>
                   </div>
