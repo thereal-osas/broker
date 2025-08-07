@@ -126,6 +126,18 @@ export default function ProfitDistributionPage() {
         toast.success(
           `Live trade profit distribution completed: ${data.result.processed} processed, ${data.result.completed} completed`
         );
+
+        // Trigger a global balance refresh event for all users
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("balanceRefresh", {
+              detail: {
+                type: "liveTradeProfit",
+                processed: data.result.processed,
+              },
+            })
+          );
+        }
       } else {
         const error = await response.json();
         toast.error(
