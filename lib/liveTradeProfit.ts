@@ -155,8 +155,8 @@ export class LiveTradeProfitService {
   static async completeExpiredLiveTrades(): Promise<number> {
     // First, get all live trades that need to be completed with full details
     const selectQuery = `
-      SELECT ult.id, ult.user_id, ult.amount, ult.start_time,
-             ltp.name as plan_name, ltp.duration_hours, ltp.hourly_profit_rate
+      SELECT ult.id, ult.user_id, ult.amount, ult.start_time, ult.total_profit,
+             ult.live_trade_plan_id, ltp.name as plan_name, ltp.duration_hours, ltp.hourly_profit_rate
       FROM user_live_trades ult
       JOIN live_trade_plans ltp ON ult.live_trade_plan_id = ltp.id
       WHERE ult.status = 'active'
@@ -262,11 +262,15 @@ export class LiveTradeProfitService {
           );
 
           // Create a live trade object for the distribution function
-          const liveTradeObj = {
+          const liveTradeObj: ActiveLiveTrade = {
             id: trade.id,
             user_id: trade.user_id,
+            live_trade_plan_id: trade.live_trade_plan_id || "", // Add missing property
             amount: trade.amount,
             hourly_profit_rate: trade.hourly_profit_rate,
+            duration_hours: trade.duration_hours,
+            start_time: trade.start_time,
+            total_profit: trade.total_profit || 0, // Add missing property with default
           };
 
           await this.distributeHourlyProfitForLiveTrade(
@@ -291,8 +295,8 @@ export class LiveTradeProfitService {
     try {
       // Get live trade details
       const tradeQuery = `
-        SELECT ult.id, ult.user_id, ult.amount, ult.status, ult.start_time,
-               ltp.name as plan_name, ltp.duration_hours, ltp.hourly_profit_rate
+        SELECT ult.id, ult.user_id, ult.amount, ult.status, ult.start_time, ult.total_profit,
+               ult.live_trade_plan_id, ltp.name as plan_name, ltp.duration_hours, ltp.hourly_profit_rate
         FROM user_live_trades ult
         JOIN live_trade_plans ltp ON ult.live_trade_plan_id = ltp.id
         WHERE ult.id = $1

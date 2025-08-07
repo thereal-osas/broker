@@ -14,7 +14,9 @@ export async function GET() {
       );
     }
 
-    console.log(`Admin ${session.user.email} requested live trade profit debug info`);
+    console.log(
+      `Admin ${session.user.email} requested live trade profit debug info`
+    );
 
     // 1. Get all live trades
     const allTradesQuery = `
@@ -92,24 +94,24 @@ export async function GET() {
 
     // 5. Simulate profit distribution logic for active trades
     const simulationResults = [];
-    
+
     for (const trade of activeTrades.rows) {
       const startTime = new Date(trade.start_time);
       const currentHour = new Date();
       currentHour.setMinutes(0, 0, 0);
-      
+
       const hoursElapsed = Math.floor(
         (currentHour.getTime() - startTime.getTime()) / (1000 * 60 * 60)
       );
-      
+
       const hourlyProfit = trade.amount * trade.hourly_profit_rate;
       const eligibleHours = [];
-      
+
       for (let hour = 1; hour <= hoursElapsed; hour++) {
         const profitHour = new Date(
           startTime.getTime() + hour * 60 * 60 * 1000
         );
-        
+
         if (profitHour <= currentHour) {
           // Check if already distributed
           const checkQuery = `
@@ -118,19 +120,22 @@ export async function GET() {
             WHERE live_trade_id = $1 
             AND DATE_TRUNC('hour', profit_hour) = DATE_TRUNC('hour', $2::timestamp)
           `;
-          
-          const checkResult = await db.query(checkQuery, [trade.id, profitHour.toISOString()]);
+
+          const checkResult = await db.query(checkQuery, [
+            trade.id,
+            profitHour.toISOString(),
+          ]);
           const alreadyDistributed = parseInt(checkResult.rows[0].count) > 0;
-          
+
           eligibleHours.push({
             hour,
             profitHour: profitHour.toISOString(),
             alreadyDistributed,
-            expectedProfit: hourlyProfit
+            expectedProfit: hourlyProfit,
           });
         }
       }
-      
+
       simulationResults.push({
         tradeId: trade.id,
         amount: trade.amount,
@@ -138,7 +143,7 @@ export async function GET() {
         hoursElapsed,
         hourlyProfitRate: trade.hourly_profit_rate,
         expectedHourlyProfit: hourlyProfit,
-        eligibleHours
+        eligibleHours,
       });
     }
 
@@ -148,23 +153,32 @@ export async function GET() {
         totalTrades: allTrades.rows.length,
         activeTrades: activeTrades.rows.length,
         existingProfitDistributions: existingProfits.rows.length,
-        tableExists: tableCheck.rows[0].exists
+        tableExists: tableCheck.rows[0].exists,
       },
       allTrades: allTrades.rows,
       activeTrades: activeTrades.rows,
       existingProfits: existingProfits.rows,
       simulationResults,
       recommendations: [
-        activeTrades.rows.length === 0 ? "No active trades found - check trade status and expiry" : null,
-        existingProfits.rows.length === 0 ? "No profit distributions found - profits may never have been distributed" : null,
-        !tableCheck.rows[0].exists ? "hourly_live_trade_profits table missing!" : null
-      ].filter(Boolean)
+        activeTrades.rows.length === 0
+          ? "No active trades found - check trade status and expiry"
+          : null,
+        existingProfits.rows.length === 0
+          ? "No profit distributions found - profits may never have been distributed"
+          : null,
+        !tableCheck.rows[0].exists
+          ? "hourly_live_trade_profits table missing!"
+          : null,
+      ].filter(Boolean),
     });
-
   } catch (error) {
     console.error("Error in live trade profit debug:", error);
     return NextResponse.json(
-      { error: "Internal server error", details: error.message },
+      {
+        error: "Internal server error",
+        details:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      },
       { status: 500 }
     );
   }
