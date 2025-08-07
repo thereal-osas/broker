@@ -153,20 +153,157 @@ export class LiveTradeProfitService {
    * Check and complete expired live trades
    */
   static async completeExpiredLiveTrades(): Promise<number> {
-    const query = `
-      UPDATE user_live_trades 
-      SET status = 'completed',
-          end_time = CURRENT_TIMESTAMP,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE status = 'active'
-      AND start_time + INTERVAL '1 hour' * (
-        SELECT duration_hours FROM live_trade_plans WHERE id = user_live_trades.live_trade_plan_id
-      ) <= CURRENT_TIMESTAMP
-      RETURNING id, user_id
+    // First, get all live trades that need to be completed
+    const selectQuery = `
+      SELECT ult.id, ult.user_id, ult.amount, ltp.name as plan_name
+      FROM user_live_trades ult
+      JOIN live_trade_plans ltp ON ult.live_trade_plan_id = ltp.id
+      WHERE ult.status = 'active'
+      AND ult.start_time + INTERVAL '1 hour' * ltp.duration_hours <= CURRENT_TIMESTAMP
     `;
 
-    const result = await db.query(query);
-    return result.rows.length;
+    const expiredTrades = await db.query(selectQuery);
+    let completedCount = 0;
+
+    for (const trade of expiredTrades.rows) {
+      try {
+        await db.query("BEGIN");
+
+        // 1. Update live trade status to completed
+        await db.query(
+          `UPDATE user_live_trades
+           SET status = 'completed',
+               end_time = CURRENT_TIMESTAMP,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $1`,
+          [trade.id]
+        );
+
+        // 2. Return original investment capital to user's deposit balance
+        await db.query(
+          `UPDATE user_balances
+           SET deposit_balance = deposit_balance + $1,
+               total_balance = total_balance + $1,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE user_id = $2`,
+          [trade.amount, trade.user_id]
+        );
+
+        // 3. Create transaction record for capital return
+        await db.query(
+          `INSERT INTO transactions (
+             user_id, type, amount, balance_type, description,
+             reference_id, status, created_at
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`,
+          [
+            trade.user_id,
+            "profit", // Use supported transaction type
+            trade.amount,
+            "deposit",
+            `Live trade #${trade.id} completed - principal returned (${trade.plan_name})`,
+            trade.id,
+            "completed",
+          ]
+        );
+
+        await db.query("COMMIT");
+        completedCount++;
+
+        console.log(
+          `Live trade ${trade.id} completed - returned $${trade.amount} capital to user ${trade.user_id}`
+        );
+      } catch (error) {
+        await db.query("ROLLBACK");
+        console.error(`Error completing live trade ${trade.id}:`, error);
+      }
+    }
+
+    return completedCount;
+  }
+
+  /**
+   * Manually complete a specific live trade (for admin use)
+   */
+  static async completeLiveTrade(liveTradeId: string): Promise<boolean> {
+    try {
+      // Get live trade details
+      const tradeQuery = `
+        SELECT ult.id, ult.user_id, ult.amount, ult.status, ltp.name as plan_name
+        FROM user_live_trades ult
+        JOIN live_trade_plans ltp ON ult.live_trade_plan_id = ltp.id
+        WHERE ult.id = $1
+      `;
+
+      const tradeResult = await db.query(tradeQuery, [liveTradeId]);
+
+      if (tradeResult.rows.length === 0) {
+        console.error(`Live trade ${liveTradeId} not found`);
+        return false;
+      }
+
+      const trade = tradeResult.rows[0];
+
+      if (trade.status !== "active") {
+        console.error(
+          `Live trade ${liveTradeId} is not active (status: ${trade.status})`
+        );
+        return false;
+      }
+
+      await db.query("BEGIN");
+
+      // 1. Update live trade status to completed
+      await db.query(
+        `UPDATE user_live_trades
+         SET status = 'completed',
+             end_time = CURRENT_TIMESTAMP,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1`,
+        [trade.id]
+      );
+
+      // 2. Return original investment capital to user's deposit balance
+      await db.query(
+        `UPDATE user_balances
+         SET deposit_balance = deposit_balance + $1,
+             total_balance = total_balance + $1,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = $2`,
+        [trade.amount, trade.user_id]
+      );
+
+      // 3. Create transaction record for capital return
+      await db.query(
+        `INSERT INTO transactions (
+           user_id, type, amount, balance_type, description,
+           reference_id, status, created_at
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`,
+        [
+          trade.user_id,
+          "profit", // Use supported transaction type
+          trade.amount,
+          "deposit",
+          `Live trade #${trade.id} manually completed - principal returned (${trade.plan_name})`,
+          trade.id,
+          "completed",
+        ]
+      );
+
+      await db.query("COMMIT");
+
+      console.log(
+        `Live trade ${trade.id} manually completed - returned $${trade.amount} capital to user ${trade.user_id}`
+      );
+
+      return true;
+    } catch (error) {
+      await db.query("ROLLBACK");
+      console.error(
+        `Error manually completing live trade ${liveTradeId}:`,
+        error
+      );
+      return false;
+    }
   }
 
   /**
