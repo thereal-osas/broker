@@ -102,16 +102,20 @@ export default function BalanceManager({
             <p className="text-xs text-gray-600 mb-1">{type.label}</p>
             <p className="text-lg font-semibold text-gray-900">
               $
-              {typeof currentBalance[
-                type.key as keyof typeof currentBalance
-              ] === "number"
-                ? currentBalance[
-                    type.key as keyof typeof currentBalance
-                  ]?.toFixed(2)
-                : parseFloat(
-                    String(currentBalance[type.key as keyof typeof currentBalance] ||
-                      "0")
-                  ).toFixed(2)}
+              {Math.max(
+                0,
+                typeof currentBalance[
+                  type.key as keyof typeof currentBalance
+                ] === "number"
+                  ? currentBalance[type.key as keyof typeof currentBalance] || 0
+                  : parseFloat(
+                      String(
+                        currentBalance[
+                          type.key as keyof typeof currentBalance
+                        ] || "0"
+                      )
+                    )
+              ).toFixed(2)}
             </p>
           </div>
         ))}

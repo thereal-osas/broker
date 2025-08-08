@@ -4,7 +4,10 @@ import { Pool, PoolClient, QueryResult } from "pg";
 const dbConfig = process.env.DATABASE_URL
   ? {
       connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      ssl:
+        process.env.NODE_ENV === "production"
+          ? { rejectUnauthorized: false }
+          : false,
       max: 20, // Maximum number of clients in the pool
       idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
       connectionTimeoutMillis: 10000, // Return an error after 10 seconds if connection could not be established
@@ -52,7 +55,11 @@ export class Database {
   }
 
   // Execute a query with retry logic
-  async query(text: string, params?: unknown[], retries: number = 3): Promise<QueryResult> {
+  async query(
+    text: string,
+    params?: unknown[],
+    retries: number = 3
+  ): Promise<QueryResult> {
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= retries; attempt++) {
@@ -65,7 +72,8 @@ export class Database {
           client.release();
         }
       } catch (error: unknown) {
-        const errorObj = error instanceof Error ? error : new Error(String(error));
+        const errorObj =
+          error instanceof Error ? error : new Error(String(error));
         lastError = errorObj;
         console.error(
           `Database query error (attempt ${attempt}/${retries}):`,
@@ -91,7 +99,7 @@ export class Database {
       }
     }
 
-    throw lastError || new Error('Database query failed');
+    throw lastError || new Error("Database query failed");
   }
 
   // Execute a transaction
@@ -168,8 +176,6 @@ export const userQueries = {
     return result.rows[0];
   },
 
-
-
   // Find user by referral code
   async findByReferralCode(referralCode: string) {
     const query = "SELECT * FROM users WHERE referral_code = $1";
@@ -218,10 +224,10 @@ export const balanceQueries = {
   ) {
     const operator = operation === "add" ? "+" : "-";
 
-    // First update the specific balance type
+    // First update the specific balance type with safeguards against negative balances
     const updateQuery = `
       UPDATE user_balances
-      SET ${balanceType} = ${balanceType} ${operator} $2,
+      SET ${balanceType} = GREATEST(0, ${balanceType} ${operator} $2),
           updated_at = CURRENT_TIMESTAMP
       WHERE user_id = $1
     `;
@@ -232,7 +238,7 @@ export const balanceQueries = {
     // (credit_score_balance is excluded as it's a points system)
     const recalculateQuery = `
       UPDATE user_balances
-      SET total_balance = profit_balance + deposit_balance + bonus_balance + card_balance
+      SET total_balance = GREATEST(0, profit_balance + deposit_balance + bonus_balance + card_balance)
       WHERE user_id = $1
       RETURNING *
     `;
@@ -244,7 +250,7 @@ export const balanceQueries = {
   async recalculateUserTotalBalance(userId: string) {
     const query = `
       UPDATE user_balances
-      SET total_balance = profit_balance + deposit_balance + bonus_balance + card_balance,
+      SET total_balance = GREATEST(0, profit_balance + deposit_balance + bonus_balance + card_balance),
           updated_at = CURRENT_TIMESTAMP
       WHERE user_id = $1
       RETURNING *
@@ -257,7 +263,7 @@ export const balanceQueries = {
   async recalculateAllTotalBalances() {
     const query = `
       UPDATE user_balances
-      SET total_balance = profit_balance + deposit_balance + bonus_balance + card_balance,
+      SET total_balance = GREATEST(0, profit_balance + deposit_balance + bonus_balance + card_balance),
           updated_at = CURRENT_TIMESTAMP
       RETURNING user_id, total_balance
     `;

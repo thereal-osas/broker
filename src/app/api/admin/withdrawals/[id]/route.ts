@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../../../lib/auth";
-import { db } from "../../../../../../lib/db";
+import {
+  db,
+  balanceQueries,
+  transactionQueries,
+} from "../../../../../../lib/db";
 
 export async function PUT(
   request: NextRequest,
@@ -23,12 +27,9 @@ export async function PUT(
     const { status, admin_notes } = body;
 
     // Validate status
-    const validStatuses = ['pending', 'approved', 'declined', 'processed'];
+    const validStatuses = ["pending", "approved", "declined", "processed"];
     if (!validStatuses.includes(status)) {
-      return NextResponse.json(
-        { error: "Invalid status" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
     // Get the withdrawal request
@@ -51,7 +52,7 @@ export async function PUT(
     const withdrawalRequest = requestResult.rows[0];
 
     // Start transaction
-    await db.query('BEGIN');
+    await db.query("BEGIN");
 
     try {
       // Update withdrawal request
@@ -61,91 +62,83 @@ export async function PUT(
         WHERE id = $4
         RETURNING *
       `;
-      
+
       const updateResult = await db.query(updateQuery, [
         status,
         admin_notes,
         session.user.id,
-        id
+        id,
       ]);
 
-      // If approved, deduct from user's balance and create transaction
-      if (status === 'approved' && withdrawalRequest.status === 'pending') {
+      // Handle balance deduction for approved or processed withdrawals
+      if (
+        (status === "approved" && withdrawalRequest.status === "pending") ||
+        (status === "processed" && withdrawalRequest.status === "approved")
+      ) {
         const amount = parseFloat(withdrawalRequest.amount);
         const userBalance = parseFloat(withdrawalRequest.total_balance || 0);
 
         // Check if user has sufficient balance
         if (userBalance < amount) {
-          await db.query('ROLLBACK');
+          await db.query("ROLLBACK");
           return NextResponse.json(
             { error: "Insufficient balance" },
             { status: 400 }
           );
         }
 
-        // Update user balance
-        const updateBalanceQuery = `
-          UPDATE user_balances 
-          SET total_balance = total_balance - $1
-          WHERE user_id = $2
-        `;
-        await db.query(updateBalanceQuery, [amount, withdrawalRequest.user_id]);
+        // Only deduct balance if not already deducted (when moving from pending to approved)
+        if (withdrawalRequest.status === "pending") {
+          // Use proper balance update mechanism that recalculates totals
+          await balanceQueries.updateBalance(
+            withdrawalRequest.user_id,
+            "total_balance",
+            amount,
+            "subtract"
+          );
 
-        // Create transaction record
-        const transactionQuery = `
-          INSERT INTO transactions (
-            user_id, type, amount, balance_type, description, 
-            reference_id, status
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
-        `;
-        await db.query(transactionQuery, [
-          withdrawalRequest.user_id,
-          'withdrawal',
-          amount,
-          'total',
-          `Withdrawal request approved - ${withdrawalRequest.withdrawal_method}`,
-          id,
-          'completed'
-        ]);
+          // Create transaction record using the transaction queries
+          await transactionQueries.createTransaction({
+            userId: withdrawalRequest.user_id,
+            type: "withdrawal",
+            amount: amount,
+            balanceType: "total",
+            description: `Debit Alert - Withdrawal ${withdrawalRequest.withdrawal_method}`,
+            referenceId: id,
+            status: "completed",
+          });
+        }
       }
 
       // If declined and was previously approved, refund the balance
-      if (status === 'declined' && withdrawalRequest.status === 'approved') {
+      if (status === "declined" && withdrawalRequest.status === "approved") {
         const amount = parseFloat(withdrawalRequest.amount);
-        
-        // Refund user balance
-        const refundBalanceQuery = `
-          UPDATE user_balances 
-          SET total_balance = total_balance + $1
-          WHERE user_id = $2
-        `;
-        await db.query(refundBalanceQuery, [amount, withdrawalRequest.user_id]);
 
-        // Create refund transaction record
-        const refundTransactionQuery = `
-          INSERT INTO transactions (
-            user_id, type, amount, balance_type, description, 
-            reference_id, status
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
-        `;
-        await db.query(refundTransactionQuery, [
+        // Refund user balance using proper balance update mechanism
+        await balanceQueries.updateBalance(
           withdrawalRequest.user_id,
-          'admin_funding',
+          "total_balance",
           amount,
-          'total',
-          `Withdrawal request declined - refund`,
-          id,
-          'completed'
-        ]);
+          "add"
+        );
+
+        // Create refund transaction record using transaction queries
+        await transactionQueries.createTransaction({
+          userId: withdrawalRequest.user_id,
+          type: "admin_funding",
+          amount: amount,
+          balanceType: "total",
+          description: "Deposit Alert - Withdrawal request declined (refund)",
+          referenceId: id,
+          status: "completed",
+        });
       }
 
-      await db.query('COMMIT');
+      await db.query("COMMIT");
 
       return NextResponse.json(updateResult.rows[0]);
     } catch (error) {
-      await db.query('ROLLBACK');
+      await db.query("ROLLBACK");
       throw error;
     }
   } catch (error) {

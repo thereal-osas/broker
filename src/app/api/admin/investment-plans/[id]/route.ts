@@ -102,6 +102,30 @@ export async function DELETE(
 
     const { id } = params;
 
+    // Check if plan exists and get its status
+    const planQuery = `
+      SELECT is_active FROM investment_plans WHERE id = $1
+    `;
+    const planResult = await db.query(planQuery, [id]);
+
+    if (planResult.rows.length === 0) {
+      return NextResponse.json(
+        { error: "Investment plan not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check if plan is active - if so, suggest deactivation first
+    if (planResult.rows[0].is_active) {
+      return NextResponse.json(
+        {
+          error:
+            "Cannot delete active plan. Deactivate the plan first, then try deleting again.",
+        },
+        { status: 400 }
+      );
+    }
+
     // Check if plan has any active investments
     const activeInvestmentsQuery = `
       SELECT COUNT(*) as count
@@ -122,30 +146,53 @@ export async function DELETE(
       );
     }
 
-    // Check if plan is active - if so, suggest deactivation first
-    const planStatusQuery = `
-      SELECT is_active FROM investment_plans WHERE id = $1
+    // Check for any investments (active or inactive) that would prevent deletion
+    const allInvestmentsQuery = `
+      SELECT COUNT(*) as count,
+             COUNT(CASE WHEN status != 'active' THEN 1 END) as inactive_count
+      FROM user_investments
+      WHERE plan_id = $1
     `;
-    const planStatusResult = await db.query(planStatusQuery, [id]);
+    const allInvestmentsResult = await db.query(allInvestmentsQuery, [id]);
+    const totalInvestments = parseInt(allInvestmentsResult.rows[0].count);
+    const inactiveInvestments = parseInt(
+      allInvestmentsResult.rows[0].inactive_count
+    );
 
-    if (planStatusResult.rows.length === 0) {
-      return NextResponse.json(
-        { error: "Investment plan not found" },
-        { status: 404 }
-      );
+    if (totalInvestments > 0) {
+      if (inactiveInvestments > 0) {
+        // Delete inactive investments that are blocking the plan deletion
+        const deleteInactiveQuery = `
+          DELETE FROM user_investments
+          WHERE plan_id = $1 AND status != 'active'
+        `;
+        await db.query(deleteInactiveQuery, [id]);
+
+        console.log(
+          `Deleted ${inactiveInvestments} inactive investments for plan ${id}`
+        );
+      }
+
+      // Check again for any remaining investments
+      const remainingQuery = `
+        SELECT COUNT(*) as count
+        FROM user_investments
+        WHERE plan_id = $1
+      `;
+      const remainingResult = await db.query(remainingQuery, [id]);
+
+      if (parseInt(remainingResult.rows[0].count) > 0) {
+        return NextResponse.json(
+          {
+            error:
+              "Cannot delete plan with remaining investments. Please ensure all investments are properly handled.",
+          },
+          { status: 400 }
+        );
+      }
     }
 
-    if (planStatusResult.rows[0].is_active) {
-      return NextResponse.json(
-        {
-          error:
-            "Cannot delete active plan. Deactivate the plan first, then try deleting again.",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Delete the plan
+    // Now attempt to delete the plan
     const deleteQuery =
       "DELETE FROM investment_plans WHERE id = $1 RETURNING *";
     const result = await db.query(deleteQuery, [id]);

@@ -1,7 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { DollarSign, TrendingUp, CreditCard, Gift, Star, Wallet } from "lucide-react";
+import {
+  DollarSign,
+  TrendingUp,
+  CreditCard,
+  Gift,
+  Star,
+  Wallet,
+} from "lucide-react";
 
 interface BalanceCardsProps {
   balance: {
@@ -93,9 +100,11 @@ export default function BalanceCards({ balance }: BalanceCardsProps) {
               <div className="text-right">
                 <p className="text-2xl font-bold text-gray-900">
                   {item.isPoints ? "CRD " : "$"}
-                  {(typeof item.amount === "number"
-                    ? item.amount
-                    : parseFloat(item.amount || 0)
+                  {Math.max(
+                    0,
+                    typeof item.amount === "number"
+                      ? item.amount
+                      : parseFloat(item.amount || 0)
                   ).toFixed(item.isPoints ? 0 : 2)}
                 </p>
               </div>
