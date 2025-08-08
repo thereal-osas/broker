@@ -102,19 +102,44 @@ export async function DELETE(
 
     const { id } = params;
 
-    // Check if plan has any investments (active or otherwise)
-    const investmentsQuery = `
+    // Check if plan has any active investments
+    const activeInvestmentsQuery = `
       SELECT COUNT(*) as count
       FROM user_investments
-      WHERE plan_id = $1
+      WHERE plan_id = $1 AND status = 'active'
     `;
-    const investmentsResult = await db.query(investmentsQuery, [id]);
+    const activeInvestmentsResult = await db.query(activeInvestmentsQuery, [
+      id,
+    ]);
 
-    if (parseInt(investmentsResult.rows[0].count) > 0) {
+    if (parseInt(activeInvestmentsResult.rows[0].count) > 0) {
       return NextResponse.json(
         {
           error:
-            "Cannot delete plan with existing investments. Deactivate it instead.",
+            "Cannot delete plan with active investments. Deactivate the plan first to suspend active investments, then try deleting again.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Check if plan is active - if so, suggest deactivation first
+    const planStatusQuery = `
+      SELECT is_active FROM investment_plans WHERE id = $1
+    `;
+    const planStatusResult = await db.query(planStatusQuery, [id]);
+
+    if (planStatusResult.rows.length === 0) {
+      return NextResponse.json(
+        { error: "Investment plan not found" },
+        { status: 404 }
+      );
+    }
+
+    if (planStatusResult.rows[0].is_active) {
+      return NextResponse.json(
+        {
+          error:
+            "Cannot delete active plan. Deactivate the plan first, then try deleting again.",
         },
         { status: 400 }
       );
