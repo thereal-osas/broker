@@ -70,16 +70,15 @@ export async function PUT(
         id,
       ]);
 
-      // Handle balance deduction for approved or processed withdrawals
-      if (
-        (status === "approved" && withdrawalRequest.status === "pending") ||
-        (status === "processed" && withdrawalRequest.status === "approved")
-      ) {
+      // Handle balance deduction for approved withdrawals
+      if (status === "approved" && withdrawalRequest.status === "pending") {
         const amount = parseFloat(withdrawalRequest.amount);
-        const userBalance = parseFloat(withdrawalRequest.total_balance || 0);
+        const userBalance = await balanceQueries.getUserBalance(
+          withdrawalRequest.user_id
+        );
 
-        // Check if user has sufficient balance
-        if (userBalance < amount) {
+        // Check if user has sufficient total balance
+        if (!userBalance || userBalance.total_balance < amount) {
           await db.query("ROLLBACK");
           return NextResponse.json(
             { error: "Insufficient balance" },
@@ -87,27 +86,84 @@ export async function PUT(
           );
         }
 
-        // Only deduct balance if not already deducted (when moving from pending to approved)
-        if (withdrawalRequest.status === "pending") {
-          // Use proper balance update mechanism that recalculates totals
+        // Smart deduction: deduct from available components in priority order
+        let remainingAmount = amount;
+        const deductions = [];
+
+        // Priority 1: Deposit balance
+        if (userBalance.deposit_balance > 0 && remainingAmount > 0) {
+          const deductFromDeposit = Math.min(
+            userBalance.deposit_balance,
+            remainingAmount
+          );
           await balanceQueries.updateBalance(
             withdrawalRequest.user_id,
-            "total_balance",
-            amount,
+            "deposit_balance",
+            deductFromDeposit,
             "subtract"
           );
-
-          // Create transaction record using the transaction queries
-          await transactionQueries.createTransaction({
-            userId: withdrawalRequest.user_id,
-            type: "withdrawal",
-            amount: amount,
-            balanceType: "total",
-            description: `Debit Alert - Withdrawal ${withdrawalRequest.withdrawal_method}`,
-            referenceId: id,
-            status: "completed",
-          });
+          remainingAmount -= deductFromDeposit;
+          deductions.push(`Deposit: $${deductFromDeposit}`);
         }
+
+        // Priority 2: Profit balance
+        if (userBalance.profit_balance > 0 && remainingAmount > 0) {
+          const deductFromProfit = Math.min(
+            userBalance.profit_balance,
+            remainingAmount
+          );
+          await balanceQueries.updateBalance(
+            withdrawalRequest.user_id,
+            "profit_balance",
+            deductFromProfit,
+            "subtract"
+          );
+          remainingAmount -= deductFromProfit;
+          deductions.push(`Profit: $${deductFromProfit}`);
+        }
+
+        // Priority 3: Bonus balance
+        if (userBalance.bonus_balance > 0 && remainingAmount > 0) {
+          const deductFromBonus = Math.min(
+            userBalance.bonus_balance,
+            remainingAmount
+          );
+          await balanceQueries.updateBalance(
+            withdrawalRequest.user_id,
+            "bonus_balance",
+            deductFromBonus,
+            "subtract"
+          );
+          remainingAmount -= deductFromBonus;
+          deductions.push(`Bonus: $${deductFromBonus}`);
+        }
+
+        // Priority 4: Card balance
+        if (userBalance.card_balance > 0 && remainingAmount > 0) {
+          const deductFromCard = Math.min(
+            userBalance.card_balance,
+            remainingAmount
+          );
+          await balanceQueries.updateBalance(
+            withdrawalRequest.user_id,
+            "card_balance",
+            deductFromCard,
+            "subtract"
+          );
+          remainingAmount -= deductFromCard;
+          deductions.push(`Card: $${deductFromCard}`);
+        }
+
+        // Create transaction record with detailed breakdown
+        await transactionQueries.createTransaction({
+          userId: withdrawalRequest.user_id,
+          type: "withdrawal",
+          amount: amount,
+          balanceType: "total",
+          description: `Debit Alert - Withdrawal ${withdrawalRequest.withdrawal_method} (${deductions.join(", ")})`,
+          referenceId: id,
+          status: "completed",
+        });
       }
 
       // If declined and was previously approved, refund the balance
