@@ -38,8 +38,13 @@ export async function PUT(
     let paramCount = 1;
 
     const allowedFields = [
-      'name', 'description', 'min_amount', 'max_amount',
-      'daily_profit_rate', 'duration_days', 'is_active'
+      "name",
+      "description",
+      "min_amount",
+      "max_amount",
+      "daily_profit_rate",
+      "duration_days",
+      "is_active",
     ];
 
     for (const field of allowedFields) {
@@ -63,7 +68,7 @@ export async function PUT(
 
     const updateQuery = `
       UPDATE investment_plans 
-      SET ${updateFields.join(', ')}
+      SET ${updateFields.join(", ")}
       WHERE id = $${paramCount}
       RETURNING *
     `;
@@ -97,23 +102,27 @@ export async function DELETE(
 
     const { id } = params;
 
-    // Check if plan has active investments
-    const activeInvestmentsQuery = `
-      SELECT COUNT(*) as count 
-      FROM user_investments 
-      WHERE plan_id = $1 AND status = 'active'
+    // Check if plan has any investments (active or otherwise)
+    const investmentsQuery = `
+      SELECT COUNT(*) as count
+      FROM user_investments
+      WHERE plan_id = $1
     `;
-    const activeResult = await db.query(activeInvestmentsQuery, [id]);
+    const investmentsResult = await db.query(investmentsQuery, [id]);
 
-    if (parseInt(activeResult.rows[0].count) > 0) {
+    if (parseInt(investmentsResult.rows[0].count) > 0) {
       return NextResponse.json(
-        { error: "Cannot delete plan with active investments. Deactivate it instead." },
+        {
+          error:
+            "Cannot delete plan with existing investments. Deactivate it instead.",
+        },
         { status: 400 }
       );
     }
 
     // Delete the plan
-    const deleteQuery = "DELETE FROM investment_plans WHERE id = $1 RETURNING *";
+    const deleteQuery =
+      "DELETE FROM investment_plans WHERE id = $1 RETURNING *";
     const result = await db.query(deleteQuery, [id]);
 
     if (result.rows.length === 0) {
@@ -123,7 +132,9 @@ export async function DELETE(
       );
     }
 
-    return NextResponse.json({ message: "Investment plan deleted successfully" });
+    return NextResponse.json({
+      message: "Investment plan deleted successfully",
+    });
   } catch (error) {
     console.error("Investment plan deletion error:", error);
     return NextResponse.json(

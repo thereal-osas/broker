@@ -23,7 +23,7 @@ interface WithdrawalRequest {
 }
 
 export default function WithdrawPage() {
-  const { balance } = useBalance();
+  const { balance, refreshBalance } = useBalance();
   const toast = useToast();
   const [amount, setAmount] = useState("");
   const [withdrawalMethod, setWithdrawalMethod] = useState("bank_transfer");
@@ -42,9 +42,9 @@ export default function WithdrawPage() {
   >([]);
   const [showForm, setShowForm] = useState(true);
   const [platformSettings, setPlatformSettings] = useState({
-    max_withdrawal_percentage: '100',
-    min_withdrawal_amount: '50',
-    max_withdrawal_amount: '50000'
+    max_withdrawal_percentage: "100",
+    min_withdrawal_amount: "50",
+    max_withdrawal_amount: "50000",
   });
 
   useEffect(() => {
@@ -106,6 +106,8 @@ export default function WithdrawPage() {
         });
         setShowForm(false);
         fetchWithdrawalRequests();
+        // Refresh balance to show current state
+        refreshBalance();
         toast.success("Withdrawal request submitted successfully!");
       } else {
         const errorData = await response.json();
@@ -149,10 +151,17 @@ export default function WithdrawPage() {
   };
 
   const availableBalance = balance?.total_balance || 0;
-  const maxWithdrawalPercentage = parseFloat(platformSettings.max_withdrawal_percentage) / 100;
-  const maxWithdrawalAmount = parseFloat(platformSettings.max_withdrawal_amount);
+  const maxWithdrawalPercentage =
+    parseFloat(platformSettings.max_withdrawal_percentage) / 100;
+  const maxWithdrawalAmount = parseFloat(
+    platformSettings.max_withdrawal_amount
+  );
   const percentageBasedMax = availableBalance * maxWithdrawalPercentage;
-  const maxWithdrawal = Math.min(availableBalance, maxWithdrawalAmount, percentageBasedMax);
+  const maxWithdrawal = Math.min(
+    availableBalance,
+    maxWithdrawalAmount,
+    percentageBasedMax
+  );
   const minWithdrawal = parseFloat(platformSettings.min_withdrawal_amount);
 
   return (
@@ -203,7 +212,9 @@ export default function WithdrawPage() {
                   placeholder="Enter amount to withdraw"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Min: ${minWithdrawal.toFixed(2)} | Max: ${maxWithdrawal.toFixed(2)} ({(maxWithdrawalPercentage * 100).toFixed(0)}% of balance)
+                  Min: ${minWithdrawal.toFixed(2)} | Max: $
+                  {maxWithdrawal.toFixed(2)} (
+                  {(maxWithdrawalPercentage * 100).toFixed(0)}% of balance)
                 </p>
               </div>
 
@@ -330,7 +341,9 @@ export default function WithdrawPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {accountDetails.cryptoType.charAt(0).toUpperCase() + accountDetails.cryptoType.slice(1)} Wallet Address
+                      {accountDetails.cryptoType.charAt(0).toUpperCase() +
+                        accountDetails.cryptoType.slice(1)}{" "}
+                      Wallet Address
                     </label>
                     <input
                       type="text"
@@ -346,7 +359,9 @@ export default function WithdrawPage() {
                       placeholder={`Enter your ${accountDetails.cryptoType} wallet address`}
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Please ensure the wallet address is correct and supports {accountDetails.cryptoType.toUpperCase()}. Incorrect addresses may result in loss of funds.
+                      Please ensure the wallet address is correct and supports{" "}
+                      {accountDetails.cryptoType.toUpperCase()}. Incorrect
+                      addresses may result in loss of funds.
                     </p>
                   </div>
                 </div>
@@ -372,7 +387,8 @@ export default function WithdrawPage() {
                       placeholder="Enter your PayPal email address"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Enter the email address associated with your PayPal account.
+                      Enter the email address associated with your PayPal
+                      account.
                     </p>
                   </div>
                 </div>
@@ -389,9 +405,12 @@ export default function WithdrawPage() {
                   parseFloat(amount) > availableBalance ||
                   parseFloat(amount) > maxWithdrawal ||
                   (withdrawalMethod === "bank_transfer" &&
-                    (!accountDetails.bankName || !accountDetails.accountName ||
-                     !accountDetails.accountNumber || !accountDetails.routingNumber)) ||
-                  (withdrawalMethod === "crypto" && !accountDetails.walletAddress) ||
+                    (!accountDetails.bankName ||
+                      !accountDetails.accountName ||
+                      !accountDetails.accountNumber ||
+                      !accountDetails.routingNumber)) ||
+                  (withdrawalMethod === "crypto" &&
+                    !accountDetails.walletAddress) ||
                   (withdrawalMethod === "paypal" && !accountDetails.paypalId)
                 }
                 className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
