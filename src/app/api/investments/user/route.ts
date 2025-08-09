@@ -139,6 +139,29 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error("Investment creation error:", error);
+
+    // Check for specific database errors
+    if (error instanceof Error) {
+      if (
+        error.message.includes("column") &&
+        error.message.includes("does not exist")
+      ) {
+        console.error("Database schema error - missing column:", error.message);
+        return NextResponse.json(
+          { error: "Database schema error. Please contact support." },
+          { status: 503 }
+        );
+      }
+
+      if (error.message.includes("card_balance")) {
+        console.error("Card balance column missing:", error.message);
+        return NextResponse.json(
+          { error: "Balance system unavailable. Please contact support." },
+          { status: 503 }
+        );
+      }
+    }
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -21,7 +21,7 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- User balances - 5 distinct balance types
+-- User balances - 6 distinct balance types
 CREATE TABLE user_balances (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -30,6 +30,7 @@ CREATE TABLE user_balances (
     deposit_balance DECIMAL(15,2) DEFAULT 0.00,
     bonus_balance DECIMAL(15,2) DEFAULT 0.00,
     credit_score_balance DECIMAL(15,2) DEFAULT 0.00,
+    card_balance DECIMAL(15,2) DEFAULT 0.00,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id)

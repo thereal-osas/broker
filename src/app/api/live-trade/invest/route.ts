@@ -135,12 +135,37 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Error starting live trade:", error);
 
-    // Check if it's a table doesn't exist error
-    if (error instanceof Error && error.message.includes("does not exist")) {
-      return NextResponse.json(
-        { error: "Live trade system not available. Please contact support." },
-        { status: 503 }
-      );
+    // Check for specific database errors
+    if (error instanceof Error) {
+      if (error.message.includes("does not exist")) {
+        if (error.message.includes("table")) {
+          return NextResponse.json(
+            {
+              error: "Live trade system not available. Please contact support.",
+            },
+            { status: 503 }
+          );
+        }
+
+        if (error.message.includes("column")) {
+          console.error(
+            "Database schema error - missing column:",
+            error.message
+          );
+          return NextResponse.json(
+            { error: "Database schema error. Please contact support." },
+            { status: 503 }
+          );
+        }
+      }
+
+      if (error.message.includes("card_balance")) {
+        console.error("Card balance column missing:", error.message);
+        return NextResponse.json(
+          { error: "Balance system unavailable. Please contact support." },
+          { status: 503 }
+        );
+      }
     }
 
     return NextResponse.json(
