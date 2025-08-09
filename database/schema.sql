@@ -106,13 +106,51 @@ CREATE TABLE withdrawal_requests (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Live Trade Plans (separate from investment_plans)
+CREATE TABLE live_trade_plans (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    min_amount DECIMAL(15,2) NOT NULL CHECK (min_amount > 0),
+    max_amount DECIMAL(15,2) CHECK (max_amount IS NULL OR max_amount >= min_amount),
+    hourly_profit_rate DECIMAL(5,4) NOT NULL CHECK (hourly_profit_rate > 0),
+    duration_hours INTEGER NOT NULL CHECK (duration_hours > 0),
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- User Live Trades (separate from user_investments)
+CREATE TABLE user_live_trades (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    live_trade_plan_id UUID NOT NULL REFERENCES live_trade_plans(id) ON DELETE CASCADE,
+    amount DECIMAL(15,2) NOT NULL CHECK (amount > 0),
+    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'completed', 'cancelled')),
+    total_profit DECIMAL(15,2) DEFAULT 0,
+    start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    end_time TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Hourly Live Trade Profits
+CREATE TABLE hourly_live_trade_profits (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    live_trade_id UUID NOT NULL REFERENCES user_live_trades(id) ON DELETE CASCADE,
+    profit_amount DECIMAL(15,2) NOT NULL,
+    profit_hour TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(live_trade_id, profit_hour)
+);
+
 -- Transaction history
 CREATE TABLE transactions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    type VARCHAR(30) NOT NULL CHECK (type IN ('deposit', 'withdrawal', 'investment', 'profit', 'bonus', 'referral_commission', 'admin_funding')),
+    type VARCHAR(30) NOT NULL CHECK (type IN ('deposit', 'withdrawal', 'investment', 'profit', 'bonus', 'referral_commission', 'admin_funding', 'live_trade_investment')),
     amount DECIMAL(15,2) NOT NULL,
-    balance_type VARCHAR(20) NOT NULL CHECK (balance_type IN ('total', 'profit', 'deposit', 'bonus', 'credit_score')),
+    balance_type VARCHAR(20) NOT NULL CHECK (balance_type IN ('total', 'profit', 'deposit', 'bonus', 'credit_score', 'card')),
     description TEXT,
     reference_id UUID, -- Reference to related record (investment, deposit request, etc.)
     status VARCHAR(20) DEFAULT 'completed' CHECK (status IN ('pending', 'completed', 'failed')),
