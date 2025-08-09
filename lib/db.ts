@@ -220,9 +220,11 @@ export const balanceQueries = {
     userId: string,
     balanceType: string,
     amount: number,
-    operation: "add" | "subtract" = "add"
+    operation: "add" | "subtract" = "add",
+    client?: PoolClient
   ) {
     const operator = operation === "add" ? "+" : "-";
+    const queryExecutor = client || db;
 
     // First update the specific balance type with safeguards against negative balances
     const updateQuery = `
@@ -231,7 +233,7 @@ export const balanceQueries = {
           updated_at = CURRENT_TIMESTAMP
       WHERE user_id = $1
     `;
-    await db.query(updateQuery, [userId, Math.abs(amount)]);
+    await queryExecutor.query(updateQuery, [userId, Math.abs(amount)]);
 
     // Then recalculate and update total_balance
     // Total balance = profit_balance + deposit_balance + bonus_balance + card_balance
@@ -242,7 +244,7 @@ export const balanceQueries = {
       WHERE user_id = $1
       RETURNING *
     `;
-    const result = await db.query(recalculateQuery, [userId]);
+    const result = await queryExecutor.query(recalculateQuery, [userId]);
     return result.rows[0];
   },
 
@@ -289,11 +291,15 @@ export const investmentQueries = {
   },
 
   // Create user investment
-  async createInvestment(investmentData: {
-    userId: string;
-    planId: string;
-    amount: number;
-  }) {
+  async createInvestment(
+    investmentData: {
+      userId: string;
+      planId: string;
+      amount: number;
+    },
+    client?: PoolClient
+  ) {
+    const queryExecutor = client || db;
     const query = `
       INSERT INTO user_investments (user_id, plan_id, amount)
       VALUES ($1, $2, $3)
@@ -304,7 +310,7 @@ export const investmentQueries = {
       investmentData.planId,
       investmentData.amount,
     ];
-    const result = await db.query(query, values);
+    const result = await queryExecutor.query(query, values);
     return result.rows[0];
   },
 
@@ -331,15 +337,19 @@ export const investmentQueries = {
 // Transaction operations
 export const transactionQueries = {
   // Create transaction
-  async createTransaction(transactionData: {
-    userId: string;
-    type: string;
-    amount: number;
-    balanceType: string;
-    description?: string;
-    referenceId?: string;
-    status?: string;
-  }) {
+  async createTransaction(
+    transactionData: {
+      userId: string;
+      type: string;
+      amount: number;
+      balanceType: string;
+      description?: string;
+      referenceId?: string;
+      status?: string;
+    },
+    client?: PoolClient
+  ) {
+    const queryExecutor = client || db;
     const query = `
       INSERT INTO transactions (user_id, type, amount, balance_type, description, reference_id, status)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -354,7 +364,7 @@ export const transactionQueries = {
       transactionData.referenceId || null,
       transactionData.status || "completed",
     ];
-    const result = await db.query(query, values);
+    const result = await queryExecutor.query(query, values);
     return result.rows[0];
   },
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { db, balanceQueries } from "@/lib/db";
+import { db, balanceQueries, transactionQueries } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   try {
@@ -82,59 +82,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Start transaction
-    await db.query("BEGIN");
-
-    try {
+    // Use proper transaction handling with client parameter
+    const result = await db.transaction(async (client) => {
       // Deduct amount from user's deposit balance (which will auto-update total_balance)
+      // Pass the transaction client to ensure it's part of the same transaction
       await balanceQueries.updateBalance(
         session.user.id,
         "deposit_balance",
         amount,
-        "subtract"
+        "subtract",
+        client
       );
 
       // Create live trade record
       const insertQuery = `
         INSERT INTO user_live_trades (
-          user_id, live_trade_plan_id, amount, status, 
+          user_id, live_trade_plan_id, amount, status,
           total_profit, start_time
         )
         VALUES ($1, $2, $3, 'active', 0, CURRENT_TIMESTAMP)
         RETURNING *
       `;
 
-      const result = await db.query(insertQuery, [
+      const tradeResult = await client.query(insertQuery, [
         session.user.id,
         live_trade_plan_id,
         amount,
       ]);
 
-      // Record transaction
-      await db.query(
-        `INSERT INTO transactions (
-          user_id, type, amount, balance_type, description, status, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
-        [
-          session.user.id,
-          "live_trade_investment",
+      // Record transaction using transactionQueries with client
+      const transaction = await transactionQueries.createTransaction(
+        {
+          userId: session.user.id,
+          type: "live_trade_investment",
           amount,
-          "deposit",
-          `Live Trade Investment: ${plan.name}`,
-          "completed",
-        ]
+          balanceType: "deposit",
+          description: `Live Trade Investment: ${plan.name}`,
+          status: "completed",
+        },
+        client
       );
 
-      await db.query("COMMIT");
+      return {
+        trade: tradeResult.rows[0],
+        transaction,
+      };
+    });
 
-      return NextResponse.json({
-        message: "Live trade started successfully",
-        trade: result.rows[0],
-      });
-    } catch (error) {
-      await db.query("ROLLBACK");
-      throw error;
-    }
+    return NextResponse.json({
+      message: "Live trade started successfully",
+      trade: result.trade,
+    });
   } catch (error) {
     console.error("Error starting live trade:", error);
 

@@ -95,30 +95,40 @@ export async function POST(request: NextRequest) {
     // Create investment and update balances in a transaction
     const result = await db.transaction(async (client) => {
       // Create investment
-      const investment = await investmentQueries.createInvestment({
-        userId: session.user.id,
-        planId,
-        amount,
-      });
+      // Pass the transaction client to ensure it's part of the same transaction
+      const investment = await investmentQueries.createInvestment(
+        {
+          userId: session.user.id,
+          planId,
+          amount,
+        },
+        client
+      );
 
       // Deduct from deposit balance (which will auto-update total_balance)
+      // Pass the transaction client to ensure it's part of the same transaction
       await balanceQueries.updateBalance(
         session.user.id,
         "deposit_balance",
         amount,
-        "subtract"
+        "subtract",
+        client
       );
 
       // Create transaction record
-      const transaction = await transactionQueries.createTransaction({
-        userId: session.user.id,
-        type: "investment",
-        amount,
-        balanceType: "deposit",
-        description: `Investment in ${plan.name}`,
-        referenceId: investment.id,
-        status: "completed",
-      });
+      // Pass the transaction client to ensure it's part of the same transaction
+      const transaction = await transactionQueries.createTransaction(
+        {
+          userId: session.user.id,
+          type: "investment",
+          amount,
+          balanceType: "deposit",
+          description: `Investment in ${plan.name}`,
+          referenceId: investment.id,
+          status: "completed",
+        },
+        client
+      );
 
       // Check if user was referred and calculate commission
       const referralQuery = `
