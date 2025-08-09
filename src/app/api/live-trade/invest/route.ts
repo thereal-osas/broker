@@ -84,14 +84,13 @@ export async function POST(request: NextRequest) {
 
     // Use proper transaction handling with client parameter
     const result = await db.transaction(async (client) => {
-      // Deduct amount from user's deposit balance (which will auto-update total_balance)
-      // Pass the transaction client to ensure it's part of the same transaction
+      // Deduct amount from user's deposit balance - PASS THE CLIENT!
       await balanceQueries.updateBalance(
         session.user.id,
         "deposit_balance",
         amount,
         "subtract",
-        client
+        client // ← ADD THIS!
       );
 
       // Create live trade record
@@ -120,7 +119,7 @@ export async function POST(request: NextRequest) {
           description: `Live Trade Investment: ${plan.name}`,
           status: "completed",
         },
-        client
+        client // ← ALREADY HAS THIS
       );
 
       return {

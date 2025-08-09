@@ -95,7 +95,6 @@ export async function POST(request: NextRequest) {
     // Create investment and update balances in a transaction
     const result = await db.transaction(async (client) => {
       // Create investment
-      // Pass the transaction client to ensure it's part of the same transaction
       const investment = await investmentQueries.createInvestment(
         {
           userId: session.user.id,
@@ -105,18 +104,16 @@ export async function POST(request: NextRequest) {
         client
       );
 
-      // Deduct from deposit balance (which will auto-update total_balance)
-      // Pass the transaction client to ensure it's part of the same transaction
+      // Deduct from deposit balance - PASS THE CLIENT!
       await balanceQueries.updateBalance(
         session.user.id,
         "deposit_balance",
         amount,
         "subtract",
-        client
+        client // ← ADD THIS!
       );
 
       // Create transaction record
-      // Pass the transaction client to ensure it's part of the same transaction
       const transaction = await transactionQueries.createTransaction(
         {
           userId: session.user.id,
@@ -127,39 +124,8 @@ export async function POST(request: NextRequest) {
           referenceId: investment.id,
           status: "completed",
         },
-        client
+        client // ← ALREADY HAS THIS
       );
-
-      // Check if user was referred and calculate commission
-      const referralQuery = `
-        SELECT r.*
-        FROM referrals r
-        WHERE r.referred_id = $1 AND r.status = 'active'
-      `;
-      const referralResult = await client.query(referralQuery, [
-        session.user.id,
-      ]);
-
-      if (referralResult.rows.length > 0) {
-        const referral = referralResult.rows[0];
-        const commissionRate = parseFloat(referral.commission_rate || 0.05); // Default 5%
-        const commissionAmount = amount * commissionRate;
-
-        // Update referral commission
-        await client.query(
-          `
-          UPDATE referrals
-          SET commission_earned = commission_earned + $1,
-              total_commission = total_commission + $1
-          WHERE id = $2
-        `,
-          [commissionAmount, referral.id]
-        );
-
-        console.log(
-          `Referral commission calculated: $${commissionAmount.toFixed(2)} for investment of $${amount}`
-        );
-      }
 
       return { investment, transaction };
     });
