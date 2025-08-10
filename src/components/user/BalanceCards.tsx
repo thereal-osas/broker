@@ -27,7 +27,6 @@ export default function BalanceCards({ balance }: BalanceCardsProps) {
       color: "from-blue-500 to-blue-600",
       bgColor: "bg-blue-50",
       iconColor: "text-blue-600",
-      description: "Your main account balance",
     },
     {
       title: "Card Balance",
@@ -36,7 +35,6 @@ export default function BalanceCards({ balance }: BalanceCardsProps) {
       color: "from-indigo-500 to-indigo-600",
       bgColor: "bg-indigo-50",
       iconColor: "text-indigo-600",
-      description: "Admin funding balance",
     },
     {
       title: "Credit Score",
@@ -45,7 +43,6 @@ export default function BalanceCards({ balance }: BalanceCardsProps) {
       color: "from-red-500 to-red-600",
       bgColor: "bg-red-50",
       iconColor: "text-red-600",
-      description: "Your credit rating",
       isPoints: true, // Flag to indicate this is a points system
     },
   ];
@@ -84,7 +81,6 @@ export default function BalanceCards({ balance }: BalanceCardsProps) {
               <h3 className="text-lg font-semibold text-gray-900 mb-1">
                 {item.title}
               </h3>
-              <p className="text-sm text-gray-600">{item.description}</p>
             </div>
           </div>
         </motion.div>
