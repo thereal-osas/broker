@@ -405,11 +405,8 @@ export default function AdminUsers() {
               currentBalance={
                 selectedUser.balance || {
                   total_balance: 0,
-                  profit_balance: 0,
-                  deposit_balance: 0,
-                  bonus_balance: 0,
-                  credit_score_balance: 0,
                   card_balance: 0,
+                  credit_score_balance: 0,
                 }
               }
               onBalanceUpdate={() => {
@@ -573,32 +570,19 @@ export default function AdminUsers() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-600">
-                      Profit Balance:
+                      Card Balance:
                     </span>
                     <span className="text-sm text-gray-900">
                       $
-                      {selectedUser.balance?.profit_balance?.toFixed(2) ||
-                        "0.00"}
+                      {selectedUser.balance?.card_balance?.toFixed(2) || "0.00"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-600">
-                      Deposit Balance:
+                      Credit Score:
                     </span>
                     <span className="text-sm text-gray-900">
-                      $
-                      {selectedUser.balance?.deposit_balance?.toFixed(2) ||
-                        "0.00"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">
-                      Bonus Balance:
-                    </span>
-                    <span className="text-sm text-gray-900">
-                      $
-                      {selectedUser.balance?.bonus_balance?.toFixed(2) ||
-                        "0.00"}
+                      {selectedUser.balance?.credit_score_balance || 0} points
                     </span>
                   </div>
                 </div>

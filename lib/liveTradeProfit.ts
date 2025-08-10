@@ -188,11 +188,10 @@ export class LiveTradeProfitService {
           [trade.id]
         );
 
-        // 2. Return original investment capital to user's deposit balance
+        // 2. Return original investment capital to user's total balance
         await db.query(
           `UPDATE user_balances
-           SET deposit_balance = deposit_balance + $1,
-               total_balance = total_balance + $1,
+           SET total_balance = total_balance + $1,
                updated_at = CURRENT_TIMESTAMP
            WHERE user_id = $2`,
           [trade.amount, trade.user_id]
@@ -208,7 +207,7 @@ export class LiveTradeProfitService {
             trade.user_id,
             "profit", // Use supported transaction type
             trade.amount,
-            "deposit",
+            "total",
             `Live trade #${trade.id} completed - principal returned (${trade.plan_name})`,
             trade.id,
             "completed",
@@ -332,11 +331,10 @@ export class LiveTradeProfitService {
         [trade.id]
       );
 
-      // 2. Return original investment capital to user's deposit balance
+      // 2. Return original investment capital to user's total balance
       await db.query(
         `UPDATE user_balances
-         SET deposit_balance = deposit_balance + $1,
-             total_balance = total_balance + $1,
+         SET total_balance = total_balance + $1,
              updated_at = CURRENT_TIMESTAMP
          WHERE user_id = $2`,
         [trade.amount, trade.user_id]
