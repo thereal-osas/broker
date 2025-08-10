@@ -104,13 +104,13 @@ export async function POST(request: NextRequest) {
         client
       );
 
-      // Deduct from deposit balance - PASS THE CLIENT!
+      // Deduct from total balance (simplified balance system)
       await balanceQueries.updateBalance(
         session.user.id,
-        "deposit_balance",
+        "total_balance",
         amount,
         "subtract",
-        client // ← ADD THIS!
+        client
       );
 
       // Create transaction record
@@ -119,12 +119,12 @@ export async function POST(request: NextRequest) {
           userId: session.user.id,
           type: "investment",
           amount,
-          balanceType: "deposit",
+          balanceType: "total",
           description: `Investment in ${plan.name}`,
           referenceId: investment.id,
           status: "completed",
         },
-        client // ← ALREADY HAS THIS
+        client
       );
 
       return { investment, transaction };

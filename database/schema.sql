@@ -21,16 +21,13 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- User balances - 6 distinct balance types
+-- User balances - Simplified 3 balance types
 CREATE TABLE user_balances (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     total_balance DECIMAL(15,2) DEFAULT 0.00,
-    profit_balance DECIMAL(15,2) DEFAULT 0.00,
-    deposit_balance DECIMAL(15,2) DEFAULT 0.00,
-    bonus_balance DECIMAL(15,2) DEFAULT 0.00,
-    credit_score_balance DECIMAL(15,2) DEFAULT 0.00,
     card_balance DECIMAL(15,2) DEFAULT 0.00,
+    credit_score_balance INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id)
@@ -150,7 +147,7 @@ CREATE TABLE transactions (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type VARCHAR(30) NOT NULL CHECK (type IN ('deposit', 'withdrawal', 'investment', 'profit', 'bonus', 'referral_commission', 'admin_funding', 'live_trade_investment')),
     amount DECIMAL(15,2) NOT NULL,
-    balance_type VARCHAR(20) NOT NULL CHECK (balance_type IN ('total', 'profit', 'deposit', 'bonus', 'credit_score', 'card')),
+    balance_type VARCHAR(20) NOT NULL CHECK (balance_type IN ('total', 'card', 'credit_score')),
     description TEXT,
     reference_id UUID, -- Reference to related record (investment, deposit request, etc.)
     status VARCHAR(20) DEFAULT 'completed' CHECK (status IN ('pending', 'completed', 'failed')),

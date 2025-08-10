@@ -31,13 +31,6 @@ export default function BalanceManager({
 
   const balanceTypes = [
     { key: "total_balance", label: "Total Balance", color: "bg-blue-500" },
-    { key: "profit_balance", label: "Profit Balance", color: "bg-green-500" },
-    {
-      key: "deposit_balance",
-      label: "Deposit Balance",
-      color: "bg-purple-500",
-    },
-    { key: "bonus_balance", label: "Bonus Balance", color: "bg-orange-500" },
     { key: "card_balance", label: "Card Balance", color: "bg-indigo-500" },
     {
       key: "credit_score_balance",

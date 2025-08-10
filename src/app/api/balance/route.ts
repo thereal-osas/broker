@@ -21,65 +21,32 @@ export async function GET() {
       const newBalance = await balanceQueries.createUserBalance(
         session.user.id
       );
-      // Convert string values to numbers
-      const profit_balance = parseFloat(newBalance.profit_balance || 0);
-      const deposit_balance = parseFloat(newBalance.deposit_balance || 0);
-      const bonus_balance = parseFloat(newBalance.bonus_balance || 0);
-      const credit_score_balance = parseFloat(
+      // Convert string values to numbers (simplified structure)
+      const total_balance = parseFloat(newBalance.total_balance || 0);
+      const card_balance = parseFloat(newBalance.card_balance || 0);
+      const credit_score_balance = parseInt(
         newBalance.credit_score_balance || 0
       );
-      const card_balance = parseFloat(newBalance.card_balance || 0);
-
-      // Calculate total balance including card balance (credit score excluded)
-      const calculated_total =
-        profit_balance + deposit_balance + bonus_balance + card_balance;
-
-      // Update the database with the correct total balance
-      await balanceQueries.recalculateUserTotalBalance(session.user.id);
 
       const formattedNewBalance = {
         ...newBalance,
-        total_balance: calculated_total,
-        profit_balance,
-        deposit_balance,
-        bonus_balance,
-        credit_score_balance,
+        total_balance,
         card_balance,
+        credit_score_balance,
       };
       return NextResponse.json(formattedNewBalance);
     }
 
-    // Convert string values to numbers
-    const profit_balance = parseFloat(balance.profit_balance || 0);
-    const deposit_balance = parseFloat(balance.deposit_balance || 0);
-    const bonus_balance = parseFloat(balance.bonus_balance || 0);
-    const credit_score_balance = parseFloat(balance.credit_score_balance || 0);
+    // Convert string values to numbers (simplified structure)
+    const total_balance = parseFloat(balance.total_balance || 0);
     const card_balance = parseFloat(balance.card_balance || 0);
-
-    // Calculate total balance including card balance (credit score excluded)
-    const calculated_total =
-      profit_balance + deposit_balance + bonus_balance + card_balance;
-    const stored_total = parseFloat(balance.total_balance || 0);
-
-    // Check if there's a discrepancy between stored and calculated total
-    const discrepancy = Math.abs(calculated_total - stored_total);
-
-    if (discrepancy > 0.01) {
-      // Recalculate and update the database total balance if there's a significant discrepancy
-      console.log(
-        `Balance discrepancy detected for user ${session.user.id}: stored=${stored_total}, calculated=${calculated_total}, difference=${discrepancy}`
-      );
-      await balanceQueries.recalculateUserTotalBalance(session.user.id);
-    }
+    const credit_score_balance = parseInt(balance.credit_score_balance || 0);
 
     const formattedBalance = {
       ...balance,
-      total_balance: calculated_total, // Always use the calculated total for consistency
-      profit_balance,
-      deposit_balance,
-      bonus_balance,
-      credit_score_balance,
+      total_balance,
       card_balance,
+      credit_score_balance,
     };
 
     return NextResponse.json(formattedBalance);

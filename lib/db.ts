@@ -215,7 +215,7 @@ export const balanceQueries = {
     return result.rows[0];
   },
 
-  // Update specific balance type and recalculate total
+  // Update specific balance type (simplified)
   async updateBalance(
     userId: string,
     balanceType: string,
@@ -226,48 +226,38 @@ export const balanceQueries = {
     const operator = operation === "add" ? "+" : "-";
     const queryExecutor = client || db;
 
-    // First update the specific balance type with safeguards against negative balances
+    // Update the specified balance type with safeguards against negative balances
     const updateQuery = `
       UPDATE user_balances
       SET ${balanceType} = GREATEST(0, ${balanceType} ${operator} $2),
           updated_at = CURRENT_TIMESTAMP
       WHERE user_id = $1
-    `;
-    await queryExecutor.query(updateQuery, [userId, Math.abs(amount)]);
-
-    // Then recalculate and update total_balance
-    // Total balance = profit_balance + deposit_balance + bonus_balance + card_balance
-    // (credit_score_balance is excluded as it's a points system)
-    const recalculateQuery = `
-      UPDATE user_balances
-      SET total_balance = GREATEST(0, profit_balance + deposit_balance + bonus_balance + card_balance)
-      WHERE user_id = $1
       RETURNING *
     `;
-    const result = await queryExecutor.query(recalculateQuery, [userId]);
+    const result = await queryExecutor.query(updateQuery, [
+      userId,
+      Math.abs(amount),
+    ]);
     return result.rows[0];
   },
 
-  // Recalculate total balance for a specific user
+  // Recalculate total balance for a specific user (simplified - no longer needed)
   async recalculateUserTotalBalance(userId: string) {
+    // With simplified balance structure, total_balance is directly managed
+    // This function is kept for compatibility but doesn't need to do anything
     const query = `
-      UPDATE user_balances
-      SET total_balance = GREATEST(0, profit_balance + deposit_balance + bonus_balance + card_balance),
-          updated_at = CURRENT_TIMESTAMP
-      WHERE user_id = $1
-      RETURNING *
+      SELECT * FROM user_balances WHERE user_id = $1
     `;
     const result = await db.query(query, [userId]);
     return result.rows[0];
   },
 
-  // Recalculate total balance for all users (maintenance function)
+  // Recalculate total balance for all users (simplified - no longer needed)
   async recalculateAllTotalBalances() {
+    // With simplified balance structure, total_balance is directly managed
+    // This function is kept for compatibility but doesn't need to do anything
     const query = `
-      UPDATE user_balances
-      SET total_balance = GREATEST(0, profit_balance + deposit_balance + bonus_balance + card_balance),
-          updated_at = CURRENT_TIMESTAMP
-      RETURNING user_id, total_balance
+      SELECT user_id, total_balance FROM user_balances
     `;
     const result = await db.query(query);
     return result.rows;
