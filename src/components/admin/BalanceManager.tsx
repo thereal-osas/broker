@@ -8,11 +8,8 @@ interface BalanceManagerProps {
   userId: string;
   currentBalance: {
     total_balance: number;
-    profit_balance: number;
-    deposit_balance: number;
-    bonus_balance: number;
-    credit_score_balance: number;
     card_balance: number;
+    credit_score_balance: number;
   };
   onBalanceUpdate: () => void;
 }

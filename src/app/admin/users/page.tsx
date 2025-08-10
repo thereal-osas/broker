@@ -34,11 +34,8 @@ interface User {
   updated_at: string;
   balance?: {
     total_balance: number;
-    profit_balance: number;
-    deposit_balance: number;
-    bonus_balance: number;
-    credit_score_balance: number;
     card_balance: number;
+    credit_score_balance: number;
   };
 }
 
@@ -89,7 +86,10 @@ export default function AdminUsers() {
     }
   };
 
-  const toggleEmailVerification = async (userId: string, emailVerified: boolean) => {
+  const toggleEmailVerification = async (
+    userId: string,
+    emailVerified: boolean
+  ) => {
     try {
       const response = await fetch(`/api/admin/users/${userId}/status`, {
         method: "PUT",
@@ -122,18 +122,23 @@ export default function AdminUsers() {
 
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/admin/users/${userToDelete.id}/delete`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await fetch(
+        `/api/admin/users/${userToDelete.id}/delete`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (response.ok) {
         fetchUsers();
         setShowDeleteConfirm(false);
         setUserToDelete(null);
-        alert(`User ${userToDelete.first_name} ${userToDelete.last_name} has been deleted successfully.`);
+        alert(
+          `User ${userToDelete.first_name} ${userToDelete.last_name} has been deleted successfully.`
+        );
       } else {
         const error = await response.json();
         alert(error.error || "Failed to delete user");
@@ -227,7 +232,7 @@ export default function AdminUsers() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className={`hover:bg-gray-50 ${!user.is_active ? 'bg-red-50' : ''}`}
+                  className={`hover:bg-gray-50 ${!user.is_active ? "bg-red-50" : ""}`}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -337,14 +342,18 @@ export default function AdminUsers() {
                       )}
                     </button>
                     <button
-                      onClick={() => toggleEmailVerification(user.id, user.email_verified)}
+                      onClick={() =>
+                        toggleEmailVerification(user.id, user.email_verified)
+                      }
                       className={`p-1 rounded ${
                         user.email_verified
                           ? "text-yellow-600 hover:text-yellow-900"
                           : "text-blue-600 hover:text-blue-900"
                       }`}
                       title={
-                        user.email_verified ? "Mark as Unverified" : "Verify Email"
+                        user.email_verified
+                          ? "Mark as Unverified"
+                          : "Verify Email"
                       }
                     >
                       <Mail className="w-4 h-4" />
@@ -448,24 +457,36 @@ export default function AdminUsers() {
                 <div className="space-y-3">
                   <div className="flex items-center">
                     <Mail className="w-4 h-4 text-gray-400 mr-2" />
-                    <span className="text-sm font-medium text-gray-600 w-20">Email:</span>
-                    <span className="text-sm text-gray-900">{selectedUser.email}</span>
+                    <span className="text-sm font-medium text-gray-600 w-20">
+                      Email:
+                    </span>
+                    <span className="text-sm text-gray-900">
+                      {selectedUser.email}
+                    </span>
                   </div>
                   <div className="flex items-center">
                     <Key className="w-4 h-4 text-gray-400 mr-2" />
-                    <span className="text-sm font-medium text-gray-600 w-20">Password:</span>
+                    <span className="text-sm font-medium text-gray-600 w-20">
+                      Password:
+                    </span>
                     <span className="text-sm text-gray-900 font-mono bg-gray-200 px-2 py-1 rounded">
                       {selectedUser.password}
                     </span>
                   </div>
                   <div className="flex items-center">
                     <Phone className="w-4 h-4 text-gray-400 mr-2" />
-                    <span className="text-sm font-medium text-gray-600 w-20">Phone:</span>
-                    <span className="text-sm text-gray-900">{selectedUser.phone || 'Not provided'}</span>
+                    <span className="text-sm font-medium text-gray-600 w-20">
+                      Phone:
+                    </span>
+                    <span className="text-sm text-gray-900">
+                      {selectedUser.phone || "Not provided"}
+                    </span>
                   </div>
                   <div className="flex items-center">
                     <Calendar className="w-4 h-4 text-gray-400 mr-2" />
-                    <span className="text-sm font-medium text-gray-600 w-20">Joined:</span>
+                    <span className="text-sm font-medium text-gray-600 w-20">
+                      Joined:
+                    </span>
                     <span className="text-sm text-gray-900">
                       {new Date(selectedUser.created_at).toLocaleDateString()}
                     </span>
@@ -481,37 +502,51 @@ export default function AdminUsers() {
                 </h3>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">Role:</span>
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                      selectedUser.role === 'admin'
-                        ? 'bg-purple-100 text-purple-800'
-                        : 'bg-blue-100 text-blue-800'
-                    }`}>
+                    <span className="text-sm font-medium text-gray-600">
+                      Role:
+                    </span>
+                    <span
+                      className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                        selectedUser.role === "admin"
+                          ? "bg-purple-100 text-purple-800"
+                          : "bg-blue-100 text-blue-800"
+                      }`}
+                    >
                       {selectedUser.role}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">Status:</span>
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                      selectedUser.is_active
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {selectedUser.is_active ? 'Active' : 'Inactive'}
+                    <span className="text-sm font-medium text-gray-600">
+                      Status:
+                    </span>
+                    <span
+                      className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                        selectedUser.is_active
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {selectedUser.is_active ? "Active" : "Inactive"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">Email Verified:</span>
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                      selectedUser.email_verified
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {selectedUser.email_verified ? 'Verified' : 'Unverified'}
+                    <span className="text-sm font-medium text-gray-600">
+                      Email Verified:
+                    </span>
+                    <span
+                      className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                        selectedUser.email_verified
+                          ? "bg-green-100 text-green-800"
+                          : "bg-yellow-100 text-yellow-800"
+                      }`}
+                    >
+                      {selectedUser.email_verified ? "Verified" : "Unverified"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">Referral Code:</span>
+                    <span className="text-sm font-medium text-gray-600">
+                      Referral Code:
+                    </span>
                     <span className="text-sm text-gray-900 font-mono bg-gray-200 px-2 py-1 rounded">
                       {selectedUser.referral_code}
                     </span>
@@ -527,27 +562,43 @@ export default function AdminUsers() {
                 </h3>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">Total Balance:</span>
+                    <span className="text-sm font-medium text-gray-600">
+                      Total Balance:
+                    </span>
                     <span className="text-sm font-bold text-green-600">
-                      ${selectedUser.balance?.total_balance?.toFixed(2) || '0.00'}
+                      $
+                      {selectedUser.balance?.total_balance?.toFixed(2) ||
+                        "0.00"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">Profit Balance:</span>
+                    <span className="text-sm font-medium text-gray-600">
+                      Profit Balance:
+                    </span>
                     <span className="text-sm text-gray-900">
-                      ${selectedUser.balance?.profit_balance?.toFixed(2) || '0.00'}
+                      $
+                      {selectedUser.balance?.profit_balance?.toFixed(2) ||
+                        "0.00"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">Deposit Balance:</span>
+                    <span className="text-sm font-medium text-gray-600">
+                      Deposit Balance:
+                    </span>
                     <span className="text-sm text-gray-900">
-                      ${selectedUser.balance?.deposit_balance?.toFixed(2) || '0.00'}
+                      $
+                      {selectedUser.balance?.deposit_balance?.toFixed(2) ||
+                        "0.00"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">Bonus Balance:</span>
+                    <span className="text-sm font-medium text-gray-600">
+                      Bonus Balance:
+                    </span>
                     <span className="text-sm text-gray-900">
-                      ${selectedUser.balance?.bonus_balance?.toFixed(2) || '0.00'}
+                      $
+                      {selectedUser.balance?.bonus_balance?.toFixed(2) ||
+                        "0.00"}
                     </span>
                   </div>
                 </div>
@@ -560,19 +611,29 @@ export default function AdminUsers() {
                 </h3>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">User ID:</span>
-                    <span className="text-xs text-gray-500 font-mono">{selectedUser.id}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">Referred By:</span>
-                    <span className="text-sm text-gray-900">
-                      {selectedUser.referred_by ? 'Yes' : 'Direct signup'}
+                    <span className="text-sm font-medium text-gray-600">
+                      User ID:
+                    </span>
+                    <span className="text-xs text-gray-500 font-mono">
+                      {selectedUser.id}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">Last Updated:</span>
+                    <span className="text-sm font-medium text-gray-600">
+                      Referred By:
+                    </span>
                     <span className="text-sm text-gray-900">
-                      {new Date(selectedUser.updated_at || selectedUser.created_at).toLocaleDateString()}
+                      {selectedUser.referred_by ? "Yes" : "Direct signup"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600">
+                      Last Updated:
+                    </span>
+                    <span className="text-sm text-gray-900">
+                      {new Date(
+                        selectedUser.updated_at || selectedUser.created_at
+                      ).toLocaleDateString()}
                     </span>
                   </div>
                 </div>
@@ -619,8 +680,12 @@ export default function AdminUsers() {
                 <Trash2 className="w-6 h-6 text-red-600" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Delete User</h3>
-                <p className="text-sm text-gray-500">This action cannot be undone</p>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Delete User
+                </h3>
+                <p className="text-sm text-gray-500">
+                  This action cannot be undone
+                </p>
               </div>
             </div>
 

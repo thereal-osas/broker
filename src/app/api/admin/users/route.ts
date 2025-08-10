@@ -18,9 +18,7 @@ interface DatabaseUserResult {
   created_at: string;
   updated_at: string;
   total_balance: string | null;
-  profit_balance: string | null;
-  deposit_balance: string | null;
-  bonus_balance: string | null;
+  card_balance: string | null;
   credit_score_balance: string | null;
 }
 

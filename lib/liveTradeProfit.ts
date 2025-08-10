@@ -87,11 +87,10 @@ export class LiveTradeProfitService {
     try {
       await db.query("BEGIN");
 
-      // 1. Add profit to user's profit balance
+      // 1. Add profit to user's total balance (simplified balance system)
       const updateBalanceQuery = `
-        UPDATE user_balances 
-        SET profit_balance = profit_balance + $1,
-            total_balance = total_balance + $1,
+        UPDATE user_balances
+        SET total_balance = total_balance + $1,
             updated_at = CURRENT_TIMESTAMP
         WHERE user_id = $2
       `;

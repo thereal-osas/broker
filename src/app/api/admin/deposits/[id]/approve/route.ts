@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../../../../lib/auth";
-import { db, balanceQueries, transactionQueries } from "../../../../../../../lib/db";
+import {
+  db,
+  balanceQueries,
+  transactionQueries,
+} from "../../../../../../../lib/db";
 
 export async function PUT(
   request: NextRequest,
@@ -40,7 +44,7 @@ export async function PUT(
 
     const depositRequest = depositResult.rows[0];
 
-    if (depositRequest.status !== 'pending') {
+    if (depositRequest.status !== "pending") {
       return NextResponse.json(
         { error: "Deposit request is not pending" },
         { status: 400 }
@@ -48,7 +52,7 @@ export async function PUT(
     }
 
     // Start database transaction
-    await db.query('BEGIN');
+    await db.query("BEGIN");
 
     try {
       // Update deposit request status
@@ -58,56 +62,46 @@ export async function PUT(
         WHERE id = $3
         RETURNING *
       `;
-      
+
       await db.query(updateQuery, [
-        adminNotes || 'Deposit approved',
+        adminNotes || "Deposit approved",
         session.user.id,
-        id
+        id,
       ]);
 
       const amount = parseFloat(depositRequest.amount);
 
-      // Update user's deposit balance
+      // Update user's total balance (simplified balance system)
       await balanceQueries.updateBalance(
         depositRequest.user_id,
-        'deposit_balance',
+        "total_balance",
         amount,
-        'add'
-      );
-
-      // Also update total balance
-      await balanceQueries.updateBalance(
-        depositRequest.user_id,
-        'total_balance',
-        amount,
-        'add'
+        "add"
       );
 
       // Create transaction record
       await transactionQueries.createTransaction({
         userId: depositRequest.user_id,
-        type: 'deposit',
+        type: "deposit",
         amount: amount,
-        balanceType: 'deposit',
-        description: `Deposit approved - ${depositRequest.payment_method} - ${depositRequest.transaction_hash || 'N/A'}`,
+        balanceType: "deposit",
+        description: `Deposit approved - ${depositRequest.payment_method} - ${depositRequest.transaction_hash || "N/A"}`,
         referenceId: id,
-        status: 'completed'
+        status: "completed",
       });
 
       // Commit transaction
-      await db.query('COMMIT');
+      await db.query("COMMIT");
 
       return NextResponse.json({
         message: "Deposit approved successfully",
-        deposit: depositRequest
+        deposit: depositRequest,
       });
-
     } catch (error) {
       // Rollback transaction on error
-      await db.query('ROLLBACK');
+      await db.query("ROLLBACK");
       throw error;
     }
-
   } catch (error) {
     console.error("Deposit approval error:", error);
     return NextResponse.json(

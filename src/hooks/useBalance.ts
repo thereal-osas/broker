@@ -7,11 +7,8 @@ interface Balance {
   id: string;
   user_id: string;
   total_balance: number;
-  profit_balance: number;
-  deposit_balance: number;
-  bonus_balance: number;
-  credit_score_balance: number;
   card_balance: number;
+  credit_score_balance: number;
   created_at: string;
   updated_at: string;
 }
