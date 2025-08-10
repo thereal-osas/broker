@@ -87,72 +87,15 @@ export async function PUT(
         }
 
         // Smart deduction: deduct from available components in priority order
-        let remainingAmount = amount;
-        const deductions = [];
+        // Simplified withdrawal: deduct from total_balance only
+        await balanceQueries.updateBalance(
+          withdrawalRequest.user_id,
+          "total_balance",
+          amount,
+          "subtract"
+        );
 
-        // Priority 1: Deposit balance
-        if (userBalance.deposit_balance > 0 && remainingAmount > 0) {
-          const deductFromDeposit = Math.min(
-            userBalance.deposit_balance,
-            remainingAmount
-          );
-          await balanceQueries.updateBalance(
-            withdrawalRequest.user_id,
-            "deposit_balance",
-            deductFromDeposit,
-            "subtract"
-          );
-          remainingAmount -= deductFromDeposit;
-          deductions.push(`Deposit: $${deductFromDeposit}`);
-        }
-
-        // Priority 2: Profit balance
-        if (userBalance.profit_balance > 0 && remainingAmount > 0) {
-          const deductFromProfit = Math.min(
-            userBalance.profit_balance,
-            remainingAmount
-          );
-          await balanceQueries.updateBalance(
-            withdrawalRequest.user_id,
-            "profit_balance",
-            deductFromProfit,
-            "subtract"
-          );
-          remainingAmount -= deductFromProfit;
-          deductions.push(`Profit: $${deductFromProfit}`);
-        }
-
-        // Priority 3: Bonus balance
-        if (userBalance.bonus_balance > 0 && remainingAmount > 0) {
-          const deductFromBonus = Math.min(
-            userBalance.bonus_balance,
-            remainingAmount
-          );
-          await balanceQueries.updateBalance(
-            withdrawalRequest.user_id,
-            "bonus_balance",
-            deductFromBonus,
-            "subtract"
-          );
-          remainingAmount -= deductFromBonus;
-          deductions.push(`Bonus: $${deductFromBonus}`);
-        }
-
-        // Priority 4: Card balance
-        if (userBalance.card_balance > 0 && remainingAmount > 0) {
-          const deductFromCard = Math.min(
-            userBalance.card_balance,
-            remainingAmount
-          );
-          await balanceQueries.updateBalance(
-            withdrawalRequest.user_id,
-            "card_balance",
-            deductFromCard,
-            "subtract"
-          );
-          remainingAmount -= deductFromCard;
-          deductions.push(`Card: $${deductFromCard}`);
-        }
+        const deductions = [`Total Balance: $${amount}`];
 
         // Create transaction record with detailed breakdown
         await transactionQueries.createTransaction({

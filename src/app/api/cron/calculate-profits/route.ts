@@ -69,10 +69,10 @@ export async function POST(request: NextRequest) {
             investment.id,
           ]);
 
-          // Add profit to user's profit balance
+          // Add profit to user's total balance
           await balanceQueries.updateBalance(
             investment.user_id,
-            "profit_balance",
+            "total_balance",
             dailyProfit,
             "add"
           );

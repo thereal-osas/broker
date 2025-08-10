@@ -36,12 +36,10 @@ export async function GET() {
     }
 
     const query = `
-      SELECT 
+      SELECT
         u.*,
         ub.total_balance,
-        ub.profit_balance,
-        ub.deposit_balance,
-        ub.bonus_balance,
+        ub.card_balance,
         ub.credit_score_balance
       FROM users u
       LEFT JOIN user_balances ub ON u.id = ub.user_id
@@ -67,10 +65,8 @@ export async function GET() {
       updated_at: user.updated_at,
       balance: {
         total_balance: parseFloat(user.total_balance || "0"),
-        profit_balance: parseFloat(user.profit_balance || "0"),
-        deposit_balance: parseFloat(user.deposit_balance || "0"),
-        bonus_balance: parseFloat(user.bonus_balance || "0"),
-        credit_score_balance: parseFloat(user.credit_score_balance || "0"),
+        card_balance: parseFloat(user.card_balance || "0"),
+        credit_score_balance: parseInt(user.credit_score_balance || "0"),
       },
     }));
 

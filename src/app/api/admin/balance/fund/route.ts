@@ -32,11 +32,8 @@ export async function POST(request: NextRequest) {
     // Validate balance type
     const validBalanceTypes = [
       "total_balance",
-      "profit_balance",
-      "deposit_balance",
-      "bonus_balance",
-      "credit_score_balance",
       "card_balance",
+      "credit_score_balance",
     ];
     if (!validBalanceTypes.includes(balanceType)) {
       return NextResponse.json(
@@ -115,11 +112,8 @@ export async function PUT(request: NextRequest) {
     // Validate balance type
     const validBalanceTypes = [
       "total_balance",
-      "profit_balance",
-      "deposit_balance",
-      "bonus_balance",
-      "credit_score_balance",
       "card_balance",
+      "credit_score_balance",
     ];
     if (!validBalanceTypes.includes(balanceType)) {
       return NextResponse.json(
