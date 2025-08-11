@@ -74,8 +74,9 @@ export async function GET() {
     // Get live trade profit summary for admin dashboard
     const summary = await LiveTradeProfitService.getLiveTradeProfitSummary();
 
-    // Get active live trades
-    const activeLiveTrades = await LiveTradeProfitService.getActiveLiveTrades();
+    // Get all active live trades (including expired ones for admin visibility)
+    const activeLiveTrades =
+      await LiveTradeProfitService.getAllActiveLiveTrades();
 
     return NextResponse.json({
       summary,

@@ -31,11 +31,11 @@ export class LiveTradeProfitService {
   }
 
   /**
-   * Get all active live trades that need profit distribution
+   * Get all active live trades that need profit distribution (within duration)
    */
   static async getActiveLiveTrades(): Promise<ActiveLiveTrade[]> {
     const query = `
-      SELECT 
+      SELECT
         ult.id,
         ult.user_id,
         ult.live_trade_plan_id,
@@ -48,6 +48,36 @@ export class LiveTradeProfitService {
       JOIN live_trade_plans ltp ON ult.live_trade_plan_id = ltp.id
       WHERE ult.status = 'active'
       AND ult.start_time + INTERVAL '1 hour' * ltp.duration_hours > CURRENT_TIMESTAMP
+    `;
+
+    const result = await db.query(query);
+    return result.rows;
+  }
+
+  /**
+   * Get all live trades regardless of duration (for admin override)
+   */
+  static async getAllActiveLiveTrades(): Promise<ActiveLiveTrade[]> {
+    const query = `
+      SELECT
+        ult.id,
+        ult.user_id,
+        ult.live_trade_plan_id,
+        ult.amount,
+        ult.start_time,
+        ult.total_profit,
+        ltp.hourly_profit_rate,
+        ltp.duration_hours,
+        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - ult.start_time)) / 3600 as hours_elapsed,
+        CASE
+          WHEN ult.start_time + INTERVAL '1 hour' * ltp.duration_hours <= CURRENT_TIMESTAMP
+          THEN true
+          ELSE false
+        END as is_expired
+      FROM user_live_trades ult
+      JOIN live_trade_plans ltp ON ult.live_trade_plan_id = ltp.id
+      WHERE ult.status = 'active'
+      ORDER BY ult.start_time DESC
     `;
 
     const result = await db.query(query);
@@ -350,7 +380,7 @@ export class LiveTradeProfitService {
           trade.user_id,
           "profit", // Use supported transaction type
           trade.amount,
-          "deposit",
+          "total",
           `Live trade #${trade.id} manually completed - principal returned (${trade.plan_name})`,
           trade.id,
           "completed",
