@@ -52,11 +52,16 @@ export async function GET() {
     }
 
     // Get all active live trades with expiry status
-    const allActiveTrades = await LiveTradeProfitService.getAllActiveLiveTrades();
-    
-    // Separate expired from active
-    const expiredTrades = allActiveTrades.filter(trade => trade.is_expired);
-    const activeTrades = allActiveTrades.filter(trade => !trade.is_expired);
+    const allActiveTrades =
+      await LiveTradeProfitService.getAllActiveLiveTrades();
+
+    // Separate expired from active (with type safety)
+    const expiredTrades = allActiveTrades.filter(
+      (trade) => trade.is_expired === true
+    );
+    const activeTrades = allActiveTrades.filter(
+      (trade) => trade.is_expired !== true
+    );
 
     return NextResponse.json({
       summary: {
@@ -64,23 +69,35 @@ export async function GET() {
         expiredTrades: expiredTrades.length,
         stillActiveTrades: activeTrades.length,
       },
-      expiredTrades: expiredTrades.map(trade => ({
+      expiredTrades: expiredTrades.map((trade) => ({
         id: trade.id,
         userId: trade.user_id,
         amount: trade.amount,
         startTime: trade.start_time,
         durationHours: trade.duration_hours,
-        hoursElapsed: parseFloat(trade.hours_elapsed).toFixed(2),
-        hoursOverdue: (parseFloat(trade.hours_elapsed) - trade.duration_hours).toFixed(2),
+        hoursElapsed: trade.hours_elapsed
+          ? parseFloat(trade.hours_elapsed.toString()).toFixed(2)
+          : "0.00",
+        hoursOverdue: trade.hours_elapsed
+          ? (
+              parseFloat(trade.hours_elapsed.toString()) - trade.duration_hours
+            ).toFixed(2)
+          : "0.00",
       })),
-      activeTrades: activeTrades.map(trade => ({
+      activeTrades: activeTrades.map((trade) => ({
         id: trade.id,
         userId: trade.user_id,
         amount: trade.amount,
         startTime: trade.start_time,
         durationHours: trade.duration_hours,
-        hoursElapsed: parseFloat(trade.hours_elapsed).toFixed(2),
-        hoursRemaining: (trade.duration_hours - parseFloat(trade.hours_elapsed)).toFixed(2),
+        hoursElapsed: trade.hours_elapsed
+          ? parseFloat(trade.hours_elapsed.toString()).toFixed(2)
+          : "0.00",
+        hoursRemaining: trade.hours_elapsed
+          ? (
+              trade.duration_hours - parseFloat(trade.hours_elapsed.toString())
+            ).toFixed(2)
+          : trade.duration_hours.toFixed(2),
       })),
       timestamp: new Date().toISOString(),
     });

@@ -9,6 +9,8 @@ interface ActiveLiveTrade {
   duration_hours: number;
   start_time: string;
   total_profit: number;
+  hours_elapsed?: number; // Optional for enhanced queries
+  is_expired?: boolean; // Optional for enhanced queries
 }
 
 interface LiveTradeProfitDistribution {
