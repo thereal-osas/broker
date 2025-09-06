@@ -136,7 +136,7 @@ export async function PUT(request: NextRequest) {
       // Create transaction record
       const transaction = await transactionQueries.createTransaction({
         userId,
-        type: operation === "add" ? "admin_funding" : "admin_deduction",
+        type: "admin_funding", // Use admin_funding for both add and subtract operations
         amount,
         balanceType: balanceType.replace("_balance", ""),
         description:

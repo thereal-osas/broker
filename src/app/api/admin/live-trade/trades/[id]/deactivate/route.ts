@@ -68,7 +68,7 @@ export async function PUT(
          ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`,
         [
           liveTrade.user_id,
-          "admin_deduction", // Use supported transaction type
+          "admin_funding", // Use supported transaction type
           0, // No amount change for deactivation
           "total", // Use supported balance type
           `Live trade #${liveTradeId} deactivated by admin (status: cancelled)`,

@@ -52,7 +52,7 @@ export async function DELETE(
         // Add the investment amount back to user's total balance
         await balanceQueries.updateBalance(
           liveTrade.user_id,
-          "deposit_balance", // Add to deposit balance
+          "total_balance", // Add to total balance (simplified structure)
           liveTrade.amount,
           "add"
         );
@@ -67,7 +67,7 @@ export async function DELETE(
             liveTrade.user_id,
             "admin_funding", // Use supported transaction type
             liveTrade.amount,
-            "deposit",
+            "total", // Use simplified balance type
             `Refund for deleted live trade #${liveTradeId}`,
             liveTradeId,
             "completed",
@@ -94,7 +94,7 @@ export async function DELETE(
          ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`,
         [
           liveTrade.user_id,
-          "admin_deduction", // Use supported transaction type
+          "admin_funding", // Use supported transaction type
           0, // No amount change for deletion log
           "total", // Use supported balance type
           `Live trade #${liveTradeId} deleted by admin${liveTrade.status === "active" ? " (refunded)" : ""}`,
