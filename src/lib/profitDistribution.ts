@@ -134,7 +134,7 @@ export class ProfitDistributionService {
         investment.user_id,
         "profit",
         profitAmount,
-        "profit",
+        "total", // ✅ Use valid balance type
         `Daily profit from investment #${investment.id}`,
         investment.id,
         "completed",
@@ -163,7 +163,7 @@ export class ProfitDistributionService {
         // Create completion transaction
         await db.query(createTransactionQuery, [
           investment.user_id,
-          "investment_completed",
+          "admin_funding", // ✅ Use valid transaction type for principal return
           investment.amount,
           "total",
           `Investment #${investment.id} completed - principal returned`,

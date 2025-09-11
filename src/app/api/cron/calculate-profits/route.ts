@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
             userId: investment.user_id,
             type: "profit",
             amount: dailyProfit,
-            balanceType: "profit",
+            balanceType: "total", // ✅ Use valid balance type
             description: `Daily profit from ${investment.plan_name}`,
             referenceId: investment.id,
             status: "completed",
