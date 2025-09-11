@@ -84,7 +84,7 @@ export async function PUT(
         userId: depositRequest.user_id,
         type: "deposit",
         amount: amount,
-        balanceType: "deposit",
+        balanceType: "total", // ✅ Use valid balance type
         description: `Deposit approved - ${depositRequest.payment_method} - ${depositRequest.transaction_hash || "N/A"}`,
         referenceId: id,
         status: "completed",

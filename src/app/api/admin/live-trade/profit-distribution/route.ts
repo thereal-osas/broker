@@ -15,11 +15,11 @@ export async function POST() {
     }
 
     console.log(
-      `Admin ${session.user.email} initiated live trade profit distribution...`
+      `Admin ${session.user.email} initiated MANUAL live trade profit distribution...`
     );
 
-    // Run hourly profit distribution
-    const result = await LiveTradeProfitService.runHourlyProfitDistribution();
+    // Run MANUAL profit distribution (includes expired trades)
+    const result = await LiveTradeProfitService.runManualProfitDistribution();
 
     // Get summary statistics
     const summary = await LiveTradeProfitService.getLiveTradeProfitSummary();

@@ -87,6 +87,32 @@ export class LiveTradeProfitService {
   }
 
   /**
+   * Get all active live trades for manual profit distribution (includes expired)
+   */
+  static async getActiveLiveTradesForManualDistribution(): Promise<
+    ActiveLiveTrade[]
+  > {
+    const query = `
+      SELECT
+        ult.id,
+        ult.user_id,
+        ult.live_trade_plan_id,
+        ult.amount,
+        ult.start_time,
+        ult.total_profit,
+        ltp.hourly_profit_rate,
+        ltp.duration_hours
+      FROM user_live_trades ult
+      JOIN live_trade_plans ltp ON ult.live_trade_plan_id = ltp.id
+      WHERE ult.status = 'active'
+      ORDER BY ult.start_time ASC
+    `;
+
+    const result = await db.query(query);
+    return result.rows;
+  }
+
+  /**
    * Check if profit has already been distributed for a specific hour for a live trade
    */
   static async isProfitDistributedForHour(
@@ -407,7 +433,7 @@ export class LiveTradeProfitService {
   }
 
   /**
-   * Run hourly profit distribution for all active live trades
+   * Run hourly profit distribution for all active live trades (automated cron)
    */
   static async runHourlyProfitDistribution(): Promise<{
     processed: number;
@@ -488,6 +514,99 @@ export class LiveTradeProfitService {
 
     console.log(
       `Hourly profit distribution completed: ${processed} processed, ${skipped} skipped, ${errors} errors, ${completed} completed`
+    );
+
+    return { processed, skipped, errors, completed };
+  }
+
+  /**
+   * Run manual profit distribution for ALL active live trades (including expired)
+   */
+  static async runManualProfitDistribution(): Promise<{
+    processed: number;
+    skipped: number;
+    errors: number;
+    completed: number;
+  }> {
+    console.log(
+      "Starting MANUAL live trade profit distribution (includes expired trades)..."
+    );
+
+    // Get ALL active trades, including expired ones
+    const activeLiveTrades =
+      await this.getActiveLiveTradesForManualDistribution();
+    console.log(
+      `Found ${activeLiveTrades.length} active live trades for manual distribution`
+    );
+
+    let processed = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    const currentTime = new Date();
+    console.log(`Current time: ${currentTime.toISOString()}`);
+
+    for (const liveTrade of activeLiveTrades) {
+      try {
+        console.log(`\nProcessing live trade ${liveTrade.id}:`);
+        console.log(`  Amount: $${liveTrade.amount}`);
+        console.log(`  Start time: ${liveTrade.start_time}`);
+        console.log(`  Duration: ${liveTrade.duration_hours} hours`);
+
+        // Calculate which hours need profit distribution
+        const startTime = new Date(liveTrade.start_time);
+        const hoursElapsed = Math.floor(
+          (currentTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)
+        );
+
+        // For manual distribution, process up to duration_hours (not unlimited)
+        const maxHours = Math.min(hoursElapsed, liveTrade.duration_hours);
+
+        console.log(`  Hours elapsed: ${hoursElapsed}`);
+        console.log(`  Max hours to process: ${maxHours}`);
+
+        if (maxHours <= 0) {
+          console.log(`  No hours to process yet - skipping`);
+          continue;
+        }
+
+        // Distribute profits for each hour within the trade duration
+        for (let hour = 1; hour <= maxHours; hour++) {
+          const profitHour = new Date(
+            startTime.getTime() + hour * 60 * 60 * 1000
+          );
+
+          console.log(`    Hour ${hour}: ${profitHour.toISOString()}`);
+
+          const alreadyDistributed = await this.isProfitDistributedForHour(
+            liveTrade.id,
+            profitHour.toISOString()
+          );
+
+          if (!alreadyDistributed) {
+            console.log(`      Processing profit for hour ${hour}...`);
+            await this.distributeHourlyProfitForLiveTrade(
+              liveTrade,
+              profitHour.toISOString()
+            );
+            processed++;
+            console.log(`      ✅ Profit distributed for hour ${hour}`);
+          } else {
+            console.log(`      ⏭️  Already distributed for hour ${hour}`);
+            skipped++;
+          }
+        }
+      } catch (error) {
+        console.error(`Error processing live trade ${liveTrade.id}:`, error);
+        errors++;
+      }
+    }
+
+    // Complete expired live trades after distributing profits
+    const completed = await this.completeExpiredLiveTrades();
+
+    console.log(
+      `Manual profit distribution completed: ${processed} processed, ${skipped} skipped, ${errors} errors, ${completed} completed`
     );
 
     return { processed, skipped, errors, completed };
