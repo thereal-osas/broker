@@ -177,7 +177,7 @@ export class LiveTradeProfitService {
         liveTrade.user_id,
         "profit", // Use supported transaction type
         profitAmount,
-        "profit",
+        "total", // Fix: Use valid balance_type
         `Hourly profit from live trade #${liveTrade.id}`,
         liveTrade.id,
         "completed",
