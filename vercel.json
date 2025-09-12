@@ -9,7 +9,7 @@
   },
   "crons": [
     {
-      "path": "/api/cron/calculate-live-trade-profits",
+      "path": "/api/cron/daily-profits",
       "schedule": "0 * * * *"
     }
   ]
