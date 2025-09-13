@@ -15,13 +15,17 @@ export class SmartDistributionService {
   /**
    * Smart investment profit distribution - only processes eligible investments
    */
-  static async runInvestmentDistribution(adminEmail: string): Promise<DistributionResult> {
-    console.log(`Admin ${adminEmail} initiated smart investment profit distribution`);
+  static async runInvestmentDistribution(
+    adminEmail: string
+  ): Promise<DistributionResult> {
+    console.log(
+      `Admin ${adminEmail} initiated smart investment profit distribution`
+    );
 
     try {
       // Get all active investments that are eligible for today's profit
       const eligibleInvestments = await this.getEligibleInvestments();
-      
+
       if (eligibleInvestments.length === 0) {
         return {
           success: true,
@@ -29,8 +33,10 @@ export class SmartDistributionService {
           skipped: 0,
           errors: 0,
           message: "No eligible investments found",
-          details: ["All active investments have already received today's profit"],
-          timestamp: new Date().toISOString()
+          details: [
+            "All active investments have already received today's profit",
+          ],
+          timestamp: new Date().toISOString(),
         };
       }
 
@@ -42,11 +48,18 @@ export class SmartDistributionService {
         try {
           await this.distributeInvestmentProfit(investment);
           processed++;
-          details.push(`Distributed profit for investment ${investment.id} (User: ${investment.email})`);
+          details.push(
+            `Distributed profit for investment ${investment.id} (User: ${investment.email})`
+          );
         } catch (error) {
           errors++;
-          console.error(`Error distributing profit for investment ${investment.id}:`, error);
-          details.push(`Failed to distribute profit for investment ${investment.id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          console.error(
+            `Error distributing profit for investment ${investment.id}:`,
+            error
+          );
+          details.push(
+            `Failed to distribute profit for investment ${investment.id}: ${error instanceof Error ? error.message : "Unknown error"}`
+          );
         }
       }
 
@@ -60,11 +73,10 @@ export class SmartDistributionService {
           `Found ${eligibleInvestments.length} eligible investments`,
           `Successfully processed: ${processed}`,
           `Errors: ${errors}`,
-          ...details
+          ...details,
         ],
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-
     } catch (error) {
       console.error("Investment distribution error:", error);
       return {
@@ -73,8 +85,10 @@ export class SmartDistributionService {
         skipped: 0,
         errors: 1,
         message: "Distribution failed",
-        details: [`Error: ${error instanceof Error ? error.message : "Unknown error"}`],
-        timestamp: new Date().toISOString()
+        details: [
+          `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        ],
+        timestamp: new Date().toISOString(),
       };
     }
   }
@@ -82,13 +96,17 @@ export class SmartDistributionService {
   /**
    * Smart live trade profit distribution - only processes eligible trades
    */
-  static async runLiveTradeDistribution(adminEmail: string): Promise<DistributionResult> {
-    console.log(`Admin ${adminEmail} initiated smart live trade profit distribution`);
+  static async runLiveTradeDistribution(
+    adminEmail: string
+  ): Promise<DistributionResult> {
+    console.log(
+      `Admin ${adminEmail} initiated smart live trade profit distribution`
+    );
 
     try {
       // Get all active live trades that are eligible for this hour's profit
       const eligibleTrades = await this.getEligibleLiveTrades();
-      
+
       if (eligibleTrades.length === 0) {
         return {
           success: true,
@@ -97,8 +115,10 @@ export class SmartDistributionService {
           errors: 0,
           completed: 0,
           message: "No eligible live trades found",
-          details: ["All active live trades have already received this hour's profit"],
-          timestamp: new Date().toISOString()
+          details: [
+            "All active live trades have already received this hour's profit",
+          ],
+          timestamp: new Date().toISOString(),
         };
       }
 
@@ -111,17 +131,23 @@ export class SmartDistributionService {
         try {
           const result = await this.distributeLiveTradeProfit(trade);
           processed++;
-          
+
           if (result.completed) {
             completed++;
-            details.push(`Completed live trade ${trade.id} and returned capital to user ${trade.email}`);
+            details.push(
+              `Completed live trade ${trade.id} and returned capital to user ${trade.email}`
+            );
           } else {
-            details.push(`Distributed hourly profit for live trade ${trade.id} (User: ${trade.email})`);
+            details.push(
+              `Distributed hourly profit for live trade ${trade.id} (User: ${trade.email})`
+            );
           }
         } catch (error) {
           errors++;
           console.error(`Error processing live trade ${trade.id}:`, error);
-          details.push(`Failed to process live trade ${trade.id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          details.push(
+            `Failed to process live trade ${trade.id}: ${error instanceof Error ? error.message : "Unknown error"}`
+          );
         }
       }
 
@@ -137,11 +163,10 @@ export class SmartDistributionService {
           `Successfully processed: ${processed}`,
           `Completed trades: ${completed}`,
           `Errors: ${errors}`,
-          ...details
+          ...details,
         ],
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-
     } catch (error) {
       console.error("Live trade distribution error:", error);
       return {
@@ -151,8 +176,10 @@ export class SmartDistributionService {
         errors: 1,
         completed: 0,
         message: "Distribution failed",
-        details: [`Error: ${error instanceof Error ? error.message : "Unknown error"}`],
-        timestamp: new Date().toISOString()
+        details: [
+          `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        ],
+        timestamp: new Date().toISOString(),
       };
     }
   }
@@ -186,10 +213,10 @@ export class SmartDistributionService {
       ORDER BY ui.created_at ASC
     `);
 
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       ...row,
       amount: parseFloat(row.amount),
-      daily_profit_rate: parseFloat(row.daily_profit_rate)
+      daily_profit_rate: parseFloat(row.daily_profit_rate),
     }));
   }
 
@@ -222,11 +249,11 @@ export class SmartDistributionService {
       ORDER BY lt.start_time ASC
     `);
 
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       ...row,
       amount: parseFloat(row.amount),
       hourly_profit_rate: parseFloat(row.hourly_profit_rate),
-      hours_elapsed: parseFloat(row.hours_elapsed)
+      hours_elapsed: parseFloat(row.hours_elapsed),
     }));
   }
 
@@ -234,11 +261,7 @@ export class SmartDistributionService {
    * Distribute profit for a single investment
    */
   private static async distributeInvestmentProfit(investment: any) {
-    const client = await db.connect();
-    
-    try {
-      await client.query('BEGIN');
-
+    return await db.transaction(async (client) => {
       const dailyProfit = investment.amount * investment.daily_profit_rate;
 
       // Add profit to user's balance
@@ -261,26 +284,20 @@ export class SmartDistributionService {
         [investment.user_id, dailyProfit]
       );
 
-      await client.query('COMMIT');
-      console.log(`Distributed daily profit of $${dailyProfit} for investment ${investment.id}`);
-
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+      console.log(
+        `Distributed daily profit of $${dailyProfit} for investment ${investment.id}`
+      );
+      return { success: true };
+    });
   }
 
   /**
    * Distribute profit for a single live trade and complete if necessary
    */
-  private static async distributeLiveTradeProfit(trade: any): Promise<{ completed: boolean }> {
-    const client = await db.connect();
-    
-    try {
-      await client.query('BEGIN');
-
+  private static async distributeLiveTradeProfit(
+    trade: any
+  ): Promise<{ completed: boolean }> {
+    return await db.transaction(async (client) => {
       const currentHour = Math.floor(trade.hours_elapsed) + 1;
       const hourlyProfit = trade.amount * trade.hourly_profit_rate;
       let completed = false;
@@ -307,7 +324,9 @@ export class SmartDistributionService {
         );
 
         completed = true;
-        console.log(`Completed live trade ${trade.id} and returned capital of $${trade.amount}`);
+        console.log(
+          `Completed live trade ${trade.id} and returned capital of $${trade.amount}`
+        );
       } else {
         // Distribute hourly profit
         await client.query(
@@ -329,17 +348,12 @@ export class SmartDistributionService {
           [trade.user_id, hourlyProfit]
         );
 
-        console.log(`Distributed hourly profit of $${hourlyProfit} for live trade ${trade.id}, hour ${currentHour}`);
+        console.log(
+          `Distributed hourly profit of $${hourlyProfit} for live trade ${trade.id}, hour ${currentHour}`
+        );
       }
 
-      await client.query('COMMIT');
       return { completed };
-
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 }
