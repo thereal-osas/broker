@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   TrendingUp,
   Play,
@@ -13,8 +13,12 @@ import {
   Calendar,
   CheckCircle,
   Clock,
+  Timer,
+  Loader2,
+  AlertCircle,
+  XCircle,
 } from "lucide-react";
-import { useToast } from "../../../hooks/useToast";
+import toast from "react-hot-toast";
 
 interface ActiveInvestment {
   id: string;
@@ -27,39 +31,93 @@ interface ActiveInvestment {
 }
 
 interface DistributionResult {
+  success: boolean;
   processed: number;
   skipped: number;
   errors: number;
+  completed?: number;
+  totalAmount?: number;
+  message: string;
+  details: string[];
+  timestamp: string;
 }
 
-interface LiveTradeDistributionResult {
-  processed: number;
-  skipped: number;
-  errors: number;
-  completed: number;
+interface CooldownStatus {
+  isOnCooldown: boolean;
+  nextAllowedTime: Date | null;
+  remainingTime: number;
+  remainingTimeFormatted: string;
+}
+
+interface DistributionState {
+  isProcessing: boolean;
+  progress: string;
+  result: DistributionResult | null;
+  cooldown: CooldownStatus | null;
 }
 
 export default function ProfitDistributionPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const toast = useToast();
   const [activeInvestments, setActiveInvestments] = useState<
     ActiveInvestment[]
   >([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDistributing, setIsDistributing] = useState(false);
-  const [isDistributingLiveTrade, setIsDistributingLiveTrade] = useState(false);
-  const [lastDistribution, setLastDistribution] =
-    useState<DistributionResult | null>(null);
-  const [lastLiveTradeDistribution, setLastLiveTradeDistribution] =
-    useState<LiveTradeDistributionResult | null>(null);
+
+  // Enhanced state management
+  const [investmentState, setInvestmentState] = useState<DistributionState>({
+    isProcessing: false,
+    progress: "",
+    result: null,
+    cooldown: null,
+  });
+
+  const [liveTradeState, setLiveTradeState] = useState<DistributionState>({
+    isProcessing: false,
+    progress: "",
+    result: null,
+    cooldown: null,
+  });
+
+  const [showConfirmDialog, setShowConfirmDialog] = useState<{
+    type: "investment" | "liveTrade" | null;
+    isOpen: boolean;
+  }>({ type: null, isOpen: false });
+
+  // Fetch cooldown status for both systems
+  const fetchCooldownStatus = useCallback(async () => {
+    try {
+      const [investmentResponse, liveTradeResponse] = await Promise.all([
+        fetch("/api/admin/profit-distribution"),
+        fetch("/api/admin/live-trade/profit-distribution"),
+      ]);
+
+      if (investmentResponse.ok) {
+        const data = await investmentResponse.json();
+        setInvestmentState((prev) => ({
+          ...prev,
+          cooldown: data.cooldownStatus,
+        }));
+      }
+
+      if (liveTradeResponse.ok) {
+        const data = await liveTradeResponse.json();
+        setLiveTradeState((prev) => ({
+          ...prev,
+          cooldown: data.cooldownStatus,
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching cooldown status:", error);
+    }
+  }, []);
 
   const fetchActiveInvestments = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/profit-distribution");
+      const response = await fetch("/api/admin/investments");
       if (response.ok) {
         const data = await response.json();
-        setActiveInvestments(data.activeInvestments || []);
+        setActiveInvestments(data.investments || []);
       }
     } catch (error) {
       console.error("Error fetching active investments:", error);
@@ -85,34 +143,76 @@ export default function ProfitDistributionPage() {
     fetchActiveInvestments();
   }, [session, status, router, fetchActiveInvestments]);
 
-  const runProfitDistribution = async () => {
-    setIsDistributing(true);
+  // Enhanced investment profit distribution
+  const runInvestmentDistribution = async () => {
+    setInvestmentState((prev) => ({
+      ...prev,
+      isProcessing: true,
+      progress: "Initializing investment profit distribution...",
+    }));
+
     try {
+      setInvestmentState((prev) => ({
+        ...prev,
+        progress: `Processing ${activeInvestments.length} active investments...`,
+      }));
+
       const response = await fetch("/api/admin/profit-distribution", {
         method: "POST",
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setLastDistribution(data.result);
-        toast.success(
-          `Profit distribution completed: ${data.result.processed} processed, ${data.result.skipped} skipped`
-        );
-        fetchActiveInvestments(); // Refresh the list
+      const result = await response.json();
+
+      setInvestmentState((prev) => ({
+        ...prev,
+        result,
+        isProcessing: false,
+        progress: "",
+      }));
+
+      if (result.success) {
+        toast.success(result.message);
+        fetchActiveInvestments();
+        fetchCooldownStatus();
       } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to run profit distribution");
+        toast.error(result.message);
       }
-    } catch {
-      toast.error("An error occurred while running profit distribution");
-    } finally {
-      setIsDistributing(false);
+    } catch (error) {
+      const errorResult: DistributionResult = {
+        success: false,
+        processed: 0,
+        skipped: 0,
+        errors: 1,
+        message: "Network error occurred",
+        details: ["Failed to connect to server"],
+        timestamp: new Date().toISOString(),
+      };
+
+      setInvestmentState((prev) => ({
+        ...prev,
+        result: errorResult,
+        isProcessing: false,
+        progress: "",
+      }));
+
+      toast.error("Network error occurred");
     }
   };
 
-  const runLiveTradeProfitDistribution = async () => {
-    setIsDistributingLiveTrade(true);
+  // Enhanced live trade profit distribution
+  const runLiveTradeDistribution = async () => {
+    setLiveTradeState((prev) => ({
+      ...prev,
+      isProcessing: true,
+      progress: "Initializing live trade profit distribution...",
+    }));
+
     try {
+      setLiveTradeState((prev) => ({
+        ...prev,
+        progress: "Processing active live trades...",
+      }));
+
       const response = await fetch(
         "/api/admin/live-trade/profit-distribution",
         {
@@ -120,38 +220,83 @@ export default function ProfitDistributionPage() {
         }
       );
 
-      if (response.ok) {
-        const data = await response.json();
-        setLastLiveTradeDistribution(data.result);
-        toast.success(
-          `Live trade profit distribution completed: ${data.result.processed} processed, ${data.result.completed} completed`
-        );
+      const result = await response.json();
 
-        // Trigger a global balance refresh event for all users
+      setLiveTradeState((prev) => ({
+        ...prev,
+        result,
+        isProcessing: false,
+        progress: "",
+      }));
+
+      if (result.success) {
+        toast.success(result.message);
+        fetchCooldownStatus();
+
+        // Trigger global balance refresh
         if (typeof window !== "undefined") {
           window.dispatchEvent(
             new CustomEvent("balanceRefresh", {
               detail: {
                 type: "liveTradeProfit",
-                processed: data.result.processed,
+                processed: result.processed,
               },
             })
           );
         }
       } else {
-        const error = await response.json();
-        toast.error(
-          error.error || "Failed to run live trade profit distribution"
-        );
+        toast.error(result.message);
       }
-    } catch {
-      toast.error(
-        "An error occurred while running live trade profit distribution"
-      );
-    } finally {
-      setIsDistributingLiveTrade(false);
+    } catch (error) {
+      const errorResult: DistributionResult = {
+        success: false,
+        processed: 0,
+        skipped: 0,
+        errors: 1,
+        message: "Network error occurred",
+        details: ["Failed to connect to server"],
+        timestamp: new Date().toISOString(),
+      };
+
+      setLiveTradeState((prev) => ({
+        ...prev,
+        result: errorResult,
+        isProcessing: false,
+        progress: "",
+      }));
+
+      toast.error("Network error occurred");
     }
   };
+
+  // Confirmation dialog handlers
+  const handleConfirmDistribution = (type: "investment" | "liveTrade") => {
+    setShowConfirmDialog({ type, isOpen: true });
+  };
+
+  const handleConfirmAction = () => {
+    if (showConfirmDialog.type === "investment") {
+      runInvestmentDistribution();
+    } else if (showConfirmDialog.type === "liveTrade") {
+      runLiveTradeDistribution();
+    }
+    setShowConfirmDialog({ type: null, isOpen: false });
+  };
+
+  // Countdown timer effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchCooldownStatus();
+    }, 1000); // Update every second
+
+    return () => clearInterval(interval);
+  }, [fetchCooldownStatus]);
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchActiveInvestments();
+    fetchCooldownStatus();
+  }, [fetchActiveInvestments, fetchCooldownStatus]);
 
   const calculateDailyProfit = (amount: number, rate: number) => {
     return amount * rate;
@@ -195,24 +340,28 @@ export default function ProfitDistributionPage() {
                 Refresh
               </button>
               <button
-                onClick={runProfitDistribution}
-                disabled={isDistributing || activeInvestments.length === 0}
+                onClick={() => handleConfirmDistribution("investment")}
+                disabled={
+                  investmentState.isProcessing || activeInvestments.length === 0
+                }
                 className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Play
-                  className={`w-4 h-4 mr-2 ${isDistributing ? "animate-spin" : ""}`}
+                  className={`w-4 h-4 mr-2 ${investmentState.isProcessing ? "animate-spin" : ""}`}
                 />
-                {isDistributing ? "Distributing..." : "Run Distribution"}
+                {investmentState.isProcessing
+                  ? "Distributing..."
+                  : "Run Distribution"}
               </button>
               <button
-                onClick={runLiveTradeProfitDistribution}
-                disabled={isDistributingLiveTrade}
+                onClick={() => handleConfirmDistribution("liveTrade")}
+                disabled={liveTradeState.isProcessing}
                 className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <TrendingUp
-                  className={`w-4 h-4 mr-2 ${isDistributingLiveTrade ? "animate-spin" : ""}`}
+                  className={`w-4 h-4 mr-2 ${liveTradeState.isProcessing ? "animate-spin" : ""}`}
                 />
-                {isDistributingLiveTrade
+                {liveTradeState.isProcessing
                   ? "Distributing..."
                   : "Run Live Trade Profits"}
               </button>
@@ -310,7 +459,9 @@ export default function ProfitDistributionPage() {
                   Last Distribution
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {lastDistribution ? `${lastDistribution.processed}` : "N/A"}
+                  {investmentState.result
+                    ? `${investmentState.result.processed}`
+                    : "N/A"}
                 </p>
               </div>
               <div className="p-3 bg-orange-50 rounded-lg">
@@ -321,7 +472,7 @@ export default function ProfitDistributionPage() {
         </div>
 
         {/* Last Distribution Result */}
-        {lastDistribution && (
+        {investmentState.result && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -334,21 +485,21 @@ export default function ProfitDistributionPage() {
               <div className="text-center p-4 bg-green-50 rounded-lg">
                 <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
                 <p className="text-2xl font-bold text-green-600">
-                  {lastDistribution.processed}
+                  {investmentState.result.processed}
                 </p>
                 <p className="text-sm text-gray-600">Processed</p>
               </div>
               <div className="text-center p-4 bg-yellow-50 rounded-lg">
                 <Clock className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
                 <p className="text-2xl font-bold text-yellow-600">
-                  {lastDistribution.skipped}
+                  {investmentState.result.skipped}
                 </p>
                 <p className="text-sm text-gray-600">Skipped</p>
               </div>
               <div className="text-center p-4 bg-red-50 rounded-lg">
                 <RefreshCw className="w-8 h-8 text-red-600 mx-auto mb-2" />
                 <p className="text-2xl font-bold text-red-600">
-                  {lastDistribution.errors}
+                  {investmentState.result.errors}
                 </p>
                 <p className="text-sm text-gray-600">Errors</p>
               </div>
@@ -357,7 +508,7 @@ export default function ProfitDistributionPage() {
         )}
 
         {/* Last Live Trade Distribution Result */}
-        {lastLiveTradeDistribution && (
+        {liveTradeState.result && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -370,28 +521,28 @@ export default function ProfitDistributionPage() {
               <div className="text-center p-4 bg-green-50 rounded-lg">
                 <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
                 <p className="text-2xl font-bold text-green-600">
-                  {lastLiveTradeDistribution.processed}
+                  {liveTradeState.result.processed}
                 </p>
                 <p className="text-sm text-gray-600">Processed</p>
               </div>
               <div className="text-center p-4 bg-yellow-50 rounded-lg">
                 <Clock className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
                 <p className="text-2xl font-bold text-yellow-600">
-                  {lastLiveTradeDistribution.skipped}
+                  {liveTradeState.result.skipped}
                 </p>
                 <p className="text-sm text-gray-600">Skipped</p>
               </div>
               <div className="text-center p-4 bg-red-50 rounded-lg">
                 <RefreshCw className="w-8 h-8 text-red-600 mx-auto mb-2" />
                 <p className="text-2xl font-bold text-red-600">
-                  {lastLiveTradeDistribution.errors}
+                  {liveTradeState.result.errors}
                 </p>
                 <p className="text-sm text-gray-600">Errors</p>
               </div>
               <div className="text-center p-4 bg-blue-50 rounded-lg">
                 <TrendingUp className="w-8 h-8 text-blue-600 mx-auto mb-2" />
                 <p className="text-2xl font-bold text-blue-600">
-                  {lastLiveTradeDistribution.completed}
+                  {liveTradeState.result.completed || 0}
                 </p>
                 <p className="text-sm text-gray-600">Completed</p>
               </div>

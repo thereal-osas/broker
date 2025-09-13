@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../../lib/auth";
-import { ProfitDistributionService } from "../../../../lib/profitDistribution";
+import { ManualDistributionService } from "../../../../../lib/manualDistributionService";
 
 export async function POST() {
   try {
@@ -14,17 +14,23 @@ export async function POST() {
       );
     }
 
-    // Run daily profit distribution
-    const result = await ProfitDistributionService.runDailyProfitDistribution();
+    // Run manual investment profit distribution with cooldown check
+    const result = await ManualDistributionService.runInvestmentDistribution(
+      session.user.email || "unknown"
+    );
 
-    return NextResponse.json({
-      message: "Profit distribution completed",
-      result,
+    return NextResponse.json(result, {
+      status: result.success ? 200 : 400,
     });
   } catch (error) {
-    console.error("Profit distribution error:", error);
+    console.error("Investment profit distribution error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      {
+        success: false,
+        message: "Internal server error",
+        details: [error instanceof Error ? error.message : "Unknown error"],
+        timestamp: new Date().toISOString(),
+      },
       { status: 500 }
     );
   }
@@ -41,16 +47,16 @@ export async function GET() {
       );
     }
 
-    // Get active investments that need profit distribution
-    const activeInvestments =
-      await ProfitDistributionService.getActiveInvestments();
+    // Get cooldown status for investment distribution
+    const cooldownStatus =
+      await ManualDistributionService.getInvestmentCooldownStatus();
 
     return NextResponse.json({
-      activeInvestments,
-      count: activeInvestments.length,
+      cooldownStatus,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Error fetching active investments:", error);
+    console.error("Error fetching investment distribution status:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

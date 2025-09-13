@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { LiveTradeProfitService } from "@/lib/liveTradeProfit";
+import { ManualDistributionService } from "../../../../../../lib/manualDistributionService";
 
 export async function POST() {
   try {
@@ -14,47 +14,28 @@ export async function POST() {
       );
     }
 
-    console.log(
-      `Admin ${session.user.email} initiated MANUAL live trade profit distribution...`
+    // Run manual live trade profit distribution with cooldown check
+    const result = await ManualDistributionService.runLiveTradeDistribution(
+      session.user.email || "unknown"
     );
 
-    // Run MANUAL profit distribution (includes expired trades)
-    const result = await LiveTradeProfitService.runManualProfitDistribution();
-
-    // Get summary statistics
-    const summary = await LiveTradeProfitService.getLiveTradeProfitSummary();
-
-    console.log(
-      `Live trade profit distribution completed by admin ${session.user.email}:`,
-      {
-        processed: result.processed,
-        skipped: result.skipped,
-        errors: result.errors,
-        completed: result.completed,
-      }
-    );
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Live trade profit distribution completed",
-        result,
-        summary,
-        timestamp: new Date().toISOString(),
-        // Add cache-busting headers to ensure fresh data
+    return NextResponse.json(result, {
+      status: result.success ? 200 : 400,
+      headers: {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
       },
-      {
-        headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
-        },
-      }
-    );
+    });
   } catch (error) {
-    console.error("Admin live trade profit distribution error:", error);
+    console.error("Live trade profit distribution error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      {
+        success: false,
+        message: "Internal server error",
+        details: [error instanceof Error ? error.message : "Unknown error"],
+        timestamp: new Date().toISOString(),
+      },
       { status: 500 }
     );
   }
@@ -71,17 +52,12 @@ export async function GET() {
       );
     }
 
-    // Get live trade profit summary for admin dashboard
-    const summary = await LiveTradeProfitService.getLiveTradeProfitSummary();
-
-    // Get all active live trades (including expired ones for admin visibility)
-    const activeLiveTrades =
-      await LiveTradeProfitService.getAllActiveLiveTrades();
+    // Get cooldown status for live trade distribution
+    const cooldownStatus =
+      await ManualDistributionService.getLiveTradeCooldownStatus();
 
     return NextResponse.json({
-      summary,
-      activeLiveTrades,
-      count: activeLiveTrades.length,
+      cooldownStatus,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
