@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../../lib/auth";
-import { ManualDistributionService } from "../../../../../lib/manualDistributionService";
+import { SmartDistributionService } from "../../../../../lib/smartDistributionService";
 
 export async function POST() {
   try {
@@ -14,8 +14,8 @@ export async function POST() {
       );
     }
 
-    // Run manual investment profit distribution with cooldown check
-    const result = await ManualDistributionService.runInvestmentDistribution(
+    // Run smart investment profit distribution
+    const result = await SmartDistributionService.runInvestmentDistribution(
       session.user.email || "unknown"
     );
 
@@ -47,12 +47,12 @@ export async function GET() {
       );
     }
 
-    // Get cooldown status for investment distribution
-    const cooldownStatus =
-      await ManualDistributionService.getInvestmentCooldownStatus();
-
+    // Return ready status - no cooldowns in smart distribution
     return NextResponse.json({
-      cooldownStatus,
+      success: true,
+      ready: true,
+      message:
+        "Smart distribution ready - will process eligible investments only",
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

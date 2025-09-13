@@ -84,6 +84,30 @@ export default function ProfitDistributionPage() {
     isOpen: boolean;
   }>({ type: null, isOpen: false });
 
+  // State for investments data
+  const [investments, setInvestments] = useState<any[]>([]);
+  const [investmentsLoading, setInvestmentsLoading] = useState(true);
+
+  // Fetch investments data
+  const fetchInvestments = useCallback(async () => {
+    try {
+      setInvestmentsLoading(true);
+      const response = await fetch("/api/admin/investments");
+      if (response.ok) {
+        const data = await response.json();
+        setInvestments(data.investments || []);
+      } else {
+        console.error("Failed to fetch investments");
+        toast.error("Failed to load investments data");
+      }
+    } catch (error) {
+      console.error("Error fetching investments:", error);
+      toast.error("Error loading investments data");
+    } finally {
+      setInvestmentsLoading(false);
+    }
+  }, [toast]);
+
   // Fetch cooldown status for both systems
   const fetchCooldownStatus = useCallback(async () => {
     try {
@@ -154,7 +178,7 @@ export default function ProfitDistributionPage() {
     try {
       setInvestmentState((prev) => ({
         ...prev,
-        progress: `Processing ${activeInvestments.length} active investments...`,
+        progress: "Checking for eligible investments...",
       }));
 
       const response = await fetch("/api/admin/profit-distribution", {
@@ -173,7 +197,7 @@ export default function ProfitDistributionPage() {
       if (result.success) {
         toast.success(result.message);
         fetchActiveInvestments();
-        fetchCooldownStatus();
+        fetchInvestments();
       } else {
         toast.error(result.message);
       }
@@ -210,7 +234,7 @@ export default function ProfitDistributionPage() {
     try {
       setLiveTradeState((prev) => ({
         ...prev,
-        progress: "Processing active live trades...",
+        progress: "Checking for eligible live trades...",
       }));
 
       const response = await fetch(
@@ -283,20 +307,13 @@ export default function ProfitDistributionPage() {
     setShowConfirmDialog({ type: null, isOpen: false });
   };
 
-  // Countdown timer effect
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchCooldownStatus();
-    }, 1000); // Update every second
-
-    return () => clearInterval(interval);
-  }, [fetchCooldownStatus]);
+  // Remove cooldown timer - using smart distribution now
 
   // Initial data fetch
   useEffect(() => {
     fetchActiveInvestments();
-    fetchCooldownStatus();
-  }, [fetchActiveInvestments, fetchCooldownStatus]);
+    fetchInvestments();
+  }, [fetchActiveInvestments, fetchInvestments]);
 
   const calculateDailyProfit = (amount: number, rate: number) => {
     return amount * rate;

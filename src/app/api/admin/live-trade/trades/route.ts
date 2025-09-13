@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { LiveTradeStatusService } from "@/lib/liveTradeStatusService";
 import { db } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
@@ -14,34 +15,57 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const query = `
-      SELECT 
-        ult.*,
-        u.first_name || ' ' || u.last_name as user_name,
-        u.email as user_email,
-        ltp.name as plan_name,
-        ltp.hourly_profit_rate,
-        ltp.duration_hours
-      FROM user_live_trades ult
-      JOIN users u ON ult.user_id = u.id
-      JOIN live_trade_plans ltp ON ult.live_trade_plan_id = ltp.id
-      ORDER BY ult.created_at DESC
-    `;
+    // Update all live trade statuses first
+    await LiveTradeStatusService.updateAllLiveTradeStatuses();
 
-    const result = await db.query(query);
+    // Get all live trades with enhanced status information
+    const liveTrades =
+      await LiveTradeStatusService.getAllLiveTradesWithStatus();
 
-    // Ensure numeric fields are properly converted
-    const processedRows = result.rows.map((row) => ({
-      ...row,
-      amount: parseFloat(row.amount || 0),
-      total_profit: parseFloat(row.total_profit || 0),
-      hourly_profit_rate: parseFloat(row.hourly_profit_rate || 0),
-      duration_hours: parseInt(row.duration_hours || 0),
-    }));
+    // Get user information for each trade
+    const tradesWithUserInfo = await Promise.all(
+      liveTrades.map(async (trade) => {
+        try {
+          const userResult = await db.query(
+            `SELECT first_name, last_name, email FROM users WHERE id = $1`,
+            [trade.user_id]
+          );
 
-    return NextResponse.json(processedRows);
+          const user = userResult.rows[0];
+
+          return {
+            ...trade,
+            user_name: user
+              ? `${user.first_name} ${user.last_name}`
+              : "Unknown User",
+            user_email: user?.email || "unknown@email.com",
+          };
+        } catch (error) {
+          console.error(
+            `Error fetching user info for trade ${trade.id}:`,
+            error
+          );
+          return {
+            ...trade,
+            user_name: "Unknown User",
+            user_email: "unknown@email.com",
+          };
+        }
+      })
+    );
+
+    return NextResponse.json({
+      trades: tradesWithUserInfo,
+      count: tradesWithUserInfo.length,
+      active_count: tradesWithUserInfo.filter((t) => t.status === "active")
+        .length,
+      completed_count: tradesWithUserInfo.filter(
+        (t) => t.status === "completed"
+      ).length,
+      timestamp: new Date().toISOString(),
+    });
   } catch (error) {
-    console.error("Error fetching user live trades:", error);
+    console.error("Error fetching live trades:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

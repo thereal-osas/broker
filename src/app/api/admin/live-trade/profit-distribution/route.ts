@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { ManualDistributionService } from "../../../../../../lib/manualDistributionService";
+import { SmartDistributionService } from "../../../../../../lib/smartDistributionService";
 
 export async function POST() {
   try {
@@ -14,8 +14,8 @@ export async function POST() {
       );
     }
 
-    // Run manual live trade profit distribution with cooldown check
-    const result = await ManualDistributionService.runLiveTradeDistribution(
+    // Run smart live trade profit distribution
+    const result = await SmartDistributionService.runLiveTradeDistribution(
       session.user.email || "unknown"
     );
 
@@ -52,12 +52,12 @@ export async function GET() {
       );
     }
 
-    // Get cooldown status for live trade distribution
-    const cooldownStatus =
-      await ManualDistributionService.getLiveTradeCooldownStatus();
-
+    // Return ready status - no cooldowns in smart distribution
     return NextResponse.json({
-      cooldownStatus,
+      success: true,
+      ready: true,
+      message:
+        "Smart distribution ready - will process eligible live trades only",
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
