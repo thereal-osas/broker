@@ -4,8 +4,10 @@ import { authOptions } from "../../../../../lib/auth";
 import { SmartDistributionService } from "../../../../../lib/smartDistributionService";
 
 export async function POST() {
+  let session;
+
   try {
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
 
     if (!session?.user || session.user.role !== "admin") {
       return NextResponse.json(
@@ -31,7 +33,7 @@ export async function POST() {
         message: error.message,
         stack: error.stack,
         name: error.name,
-        adminEmail: session.user.email,
+        adminEmail: session?.user?.email || "unknown",
       });
     }
 
