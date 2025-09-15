@@ -49,24 +49,66 @@ export async function GET() {
       ORDER BY ui.created_at DESC
     `);
 
-    const investments = result.rows.map(row => ({
+    const investments = result.rows.map((row) => ({
       ...row,
       amount: parseFloat(row.amount),
       daily_profit_rate: parseFloat(row.daily_profit_rate),
       days_completed: parseInt(row.days_completed),
-      duration_days: parseInt(row.duration_days)
+      duration_days: parseInt(row.duration_days),
     }));
 
     return NextResponse.json({
       investments,
       count: investments.length,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("Error fetching investments:", error);
+
+    // Enhanced error logging for debugging
+    if (error instanceof Error) {
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      });
+
+      // Check for specific database errors
+      if (
+        error.message.includes("relation") &&
+        error.message.includes("does not exist")
+      ) {
+        return NextResponse.json(
+          {
+            error: "Database table missing",
+            details: "Required database tables are not properly set up",
+            technical: error.message,
+          },
+          { status: 503 }
+        );
+      }
+
+      if (
+        error.message.includes("column") &&
+        error.message.includes("does not exist")
+      ) {
+        return NextResponse.json(
+          {
+            error: "Database schema error",
+            details: "Database columns are missing or incorrectly named",
+            technical: error.message,
+          },
+          { status: 503 }
+        );
+      }
+    }
+
     return NextResponse.json(
-      { error: "Internal server error" },
+      {
+        error: "Internal server error",
+        details: "Failed to fetch investment data",
+        timestamp: new Date().toISOString(),
+      },
       { status: 500 }
     );
   }

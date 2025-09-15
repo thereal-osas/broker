@@ -42,18 +42,10 @@ interface DistributionResult {
   timestamp: string;
 }
 
-interface CooldownStatus {
-  isOnCooldown: boolean;
-  nextAllowedTime: Date | null;
-  remainingTime: number;
-  remainingTimeFormatted: string;
-}
-
 interface DistributionState {
   isProcessing: boolean;
   progress: string;
   result: DistributionResult | null;
-  cooldown: CooldownStatus | null;
 }
 
 export default function ProfitDistributionPage() {
@@ -69,14 +61,12 @@ export default function ProfitDistributionPage() {
     isProcessing: false,
     progress: "",
     result: null,
-    cooldown: null,
   });
 
   const [liveTradeState, setLiveTradeState] = useState<DistributionState>({
     isProcessing: false,
     progress: "",
     result: null,
-    cooldown: null,
   });
 
   const [showConfirmDialog, setShowConfirmDialog] = useState<{
@@ -108,33 +98,7 @@ export default function ProfitDistributionPage() {
     }
   }, [toast]);
 
-  // Fetch cooldown status for both systems
-  const fetchCooldownStatus = useCallback(async () => {
-    try {
-      const [investmentResponse, liveTradeResponse] = await Promise.all([
-        fetch("/api/admin/profit-distribution"),
-        fetch("/api/admin/live-trade/profit-distribution"),
-      ]);
-
-      if (investmentResponse.ok) {
-        const data = await investmentResponse.json();
-        setInvestmentState((prev) => ({
-          ...prev,
-          cooldown: data.cooldownStatus,
-        }));
-      }
-
-      if (liveTradeResponse.ok) {
-        const data = await liveTradeResponse.json();
-        setLiveTradeState((prev) => ({
-          ...prev,
-          cooldown: data.cooldownStatus,
-        }));
-      }
-    } catch (error) {
-      console.error("Error fetching cooldown status:", error);
-    }
-  }, []);
+  // Note: Cooldown system removed - using smart distribution now
 
   const fetchActiveInvestments = useCallback(async () => {
     try {
@@ -255,7 +219,6 @@ export default function ProfitDistributionPage() {
 
       if (result.success) {
         toast.success(result.message);
-        fetchCooldownStatus();
 
         // Trigger global balance refresh
         if (typeof window !== "undefined") {
@@ -672,6 +635,48 @@ export default function ProfitDistributionPage() {
           )}
         </motion.div>
       </div>
+
+      {/* Confirmation Dialog */}
+      {showConfirmDialog.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
+          >
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Confirm Profit Distribution
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {showConfirmDialog.type === "investment"
+                ? "Are you sure you want to run the investment profit distribution? This will distribute profits to all eligible active investments."
+                : "Are you sure you want to run the live trade profit distribution? This will distribute hourly profits to all eligible active live trades."}
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() =>
+                  setShowConfirmDialog({ type: null, isOpen: false })
+                }
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmAction}
+                className={`px-4 py-2 text-white rounded-lg transition-colors ${
+                  showConfirmDialog.type === "investment"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
+              >
+                {showConfirmDialog.type === "investment"
+                  ? "Run Investment Distribution"
+                  : "Run Live Trade Distribution"}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

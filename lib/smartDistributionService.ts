@@ -225,28 +225,30 @@ export class SmartDistributionService {
    */
   private static async getEligibleLiveTrades() {
     const result = await db.query(`
-      SELECT 
-        lt.id,
-        lt.user_id,
-        lt.amount,
-        lt.hourly_profit_rate,
-        lt.duration_hours,
-        lt.start_time,
-        lt.end_time,
-        lt.status,
+      SELECT
+        ult.id,
+        ult.user_id,
+        ult.amount,
+        ltp.hourly_profit_rate,
+        ltp.duration_hours,
+        ult.start_time,
+        ult.end_time,
+        ult.status,
         u.email,
         u.first_name,
         u.last_name,
-        EXTRACT(EPOCH FROM (NOW() - lt.start_time)) / 3600 as hours_elapsed
-      FROM live_trades lt
-      JOIN users u ON lt.user_id = u.id
-      WHERE lt.status = 'active'
+        EXTRACT(EPOCH FROM (NOW() - ult.start_time)) / 3600 as hours_elapsed
+      FROM user_live_trades ult
+      JOIN live_trade_plans ltp ON ult.live_trade_plan_id = ltp.id
+      JOIN users u ON ult.user_id = u.id
+      WHERE ult.status = 'active'
+        AND ult.start_time + INTERVAL '1 hour' * ltp.duration_hours > NOW()
         AND NOT EXISTS (
-          SELECT 1 FROM hourly_live_trade_profits hltp 
-          WHERE hltp.live_trade_id = lt.id 
-            AND hltp.hour_number = FLOOR(EXTRACT(EPOCH FROM (NOW() - lt.start_time)) / 3600) + 1
+          SELECT 1 FROM hourly_live_trade_profits hltp
+          WHERE hltp.live_trade_id = ult.id
+            AND hltp.profit_hour = DATE_TRUNC('hour', NOW())
         )
-      ORDER BY lt.start_time ASC
+      ORDER BY ult.start_time ASC
     `);
 
     return result.rows.map((row) => ({
@@ -298,15 +300,19 @@ export class SmartDistributionService {
     trade: any
   ): Promise<{ completed: boolean }> {
     return await db.transaction(async (client) => {
-      const currentHour = Math.floor(trade.hours_elapsed) + 1;
+      const currentHour = new Date();
+      currentHour.setMinutes(0, 0, 0); // Round to current hour
       const hourlyProfit = trade.amount * trade.hourly_profit_rate;
       let completed = false;
 
-      // Check if trade should be completed
-      if (currentHour >= trade.duration_hours) {
+      // Check if trade should be completed (duration exceeded)
+      const tradeEndTime = new Date(
+        trade.start_time.getTime() + trade.duration_hours * 60 * 60 * 1000
+      );
+      if (currentHour >= tradeEndTime) {
         // Complete the trade and return capital
         await client.query(
-          `UPDATE live_trades SET status = 'completed', end_time = NOW() WHERE id = $1`,
+          `UPDATE user_live_trades SET status = 'completed', end_time = NOW() WHERE id = $1`,
           [trade.id]
         );
 
@@ -319,7 +325,7 @@ export class SmartDistributionService {
         // Record capital return transaction
         await client.query(
           `INSERT INTO transactions (user_id, type, amount, description, balance_type, status, created_at)
-           VALUES ($1, 'credit', $2, 'Live Trade Capital Return', 'total', 'completed', NOW())`,
+           VALUES ($1, 'profit', $2, 'Live Trade Capital Return', 'total', 'completed', NOW())`,
           [trade.user_id, trade.amount]
         );
 
@@ -336,20 +342,20 @@ export class SmartDistributionService {
 
         // Record hourly profit
         await client.query(
-          `INSERT INTO hourly_live_trade_profits (live_trade_id, hour_number, profit_amount, created_at)
+          `INSERT INTO hourly_live_trade_profits (live_trade_id, profit_amount, profit_hour, created_at)
            VALUES ($1, $2, $3, NOW())`,
-          [trade.id, currentHour, hourlyProfit]
+          [trade.id, hourlyProfit, currentHour.toISOString()]
         );
 
         // Record transaction
         await client.query(
           `INSERT INTO transactions (user_id, type, amount, description, balance_type, status, created_at)
-           VALUES ($1, 'credit', $2, 'Live Trade Hourly Profit', 'total', 'completed', NOW())`,
+           VALUES ($1, 'profit', $2, 'Live Trade Hourly Profit', 'total', 'completed', NOW())`,
           [trade.user_id, hourlyProfit]
         );
 
         console.log(
-          `Distributed hourly profit of $${hourlyProfit} for live trade ${trade.id}, hour ${currentHour}`
+          `Distributed hourly profit of $${hourlyProfit} for live trade ${trade.id} at ${currentHour.toISOString()}`
         );
       }
 

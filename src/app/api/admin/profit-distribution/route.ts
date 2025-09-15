@@ -24,12 +24,27 @@ export async function POST() {
     });
   } catch (error) {
     console.error("Investment profit distribution error:", error);
+
+    // Enhanced error logging for debugging
+    if (error instanceof Error) {
+      console.error("Profit distribution error details:", {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        adminEmail: session.user.email,
+      });
+    }
+
     return NextResponse.json(
       {
         success: false,
         message: "Internal server error",
-        details: [error instanceof Error ? error.message : "Unknown error"],
+        details: [
+          error instanceof Error ? error.message : "Unknown error",
+          "Check server logs for detailed error information",
+        ],
         timestamp: new Date().toISOString(),
+        errorType: error instanceof Error ? error.name : "UnknownError",
       },
       { status: 500 }
     );
