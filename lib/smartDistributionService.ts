@@ -205,10 +205,10 @@ export class SmartDistributionService {
       WHERE ui.status = 'active'
         AND ui.end_date > NOW()
         AND NOT EXISTS (
-          SELECT 1 FROM profit_distributions pd 
-          WHERE pd.user_id = ui.user_id 
-            AND pd.investment_id = ui.id 
-            AND DATE(pd.created_at) = CURRENT_DATE
+          SELECT 1 FROM profit_distributions pd
+          WHERE pd.user_id = ui.user_id
+            AND pd.investment_id = ui.id
+            AND DATE(pd.distribution_date) = CURRENT_DATE
         )
       ORDER BY ui.created_at ASC
     `);
@@ -274,9 +274,9 @@ export class SmartDistributionService {
 
       // Record the profit distribution
       await client.query(
-        `INSERT INTO profit_distributions (user_id, investment_id, amount, distribution_date, created_at)
-         VALUES ($1, $2, $3, CURRENT_DATE, NOW())`,
-        [investment.user_id, investment.id, dailyProfit]
+        `INSERT INTO profit_distributions (user_id, investment_id, amount, profit_amount, distribution_date, created_at)
+         VALUES ($1, $2, $3, $4, CURRENT_DATE, NOW())`,
+        [investment.user_id, investment.id, investment.amount, dailyProfit]
       );
 
       // Record transaction

@@ -31,10 +31,10 @@ export async function GET() {
         u.email,
         ip.name as plan_name,
         COALESCE(
-          (SELECT COUNT(*) FROM profit_distributions pd 
-           WHERE pd.user_id = ui.user_id 
-           AND pd.investment_id = ui.id 
-           AND pd.created_at >= ui.start_date),
+          (SELECT COUNT(*) FROM profit_distributions pd
+           WHERE pd.user_id = ui.user_id
+           AND pd.investment_id = ui.id
+           AND pd.distribution_date >= DATE(ui.start_date)),
           0
         ) as days_completed,
         CASE 

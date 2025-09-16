@@ -321,9 +321,7 @@ export default function ProfitDistributionPage() {
               </button>
               <button
                 onClick={() => handleConfirmDistribution("investment")}
-                disabled={
-                  investmentState.isProcessing || activeInvestments.length === 0
-                }
+                disabled={investmentState.isProcessing}
                 className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Play

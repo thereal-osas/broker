@@ -1,93 +1,120 @@
-# Admin Page Fixes Summary
+# Admin Profit Distribution Fixes Summary
 
 ## Issues Identified and Fixed
 
-### 1. 500 Server Error on Investment Fetching
-**Problem**: The SmartDistributionService was using incorrect table names for live trades.
-**Root Cause**: The service was querying `live_trades` table instead of `user_live_trades`.
-**Fix**: Updated `getEligibleLiveTrades()` method in `lib/smartDistributionService.ts` to use correct table names and proper JOIN syntax.
+### 1. Investment Data Fetching Error ("Failed to get investment data")
 
-### 2. Profit Distribution Buttons Not Working
-**Problem**: Buttons appeared to do nothing when clicked.
-**Root Cause**: Missing confirmation dialog component in the JSX.
-**Fix**: Added the confirmation dialog component to `src/app/admin/profit-distribution/page.tsx`.
+**Problem**: The API query was using incorrect column names for the `profit_distributions` table.
+**Root Cause**: The query was using `pd.created_at` instead of `pd.distribution_date` for date comparisons.
+**Fix**: Updated the query in `src/app/api/admin/investments/route.ts` to use `pd.distribution_date` instead of `pd.created_at`.
 
-### 3. Outdated Cooldown System References
-**Problem**: Code still referenced removed cooldown system.
-**Root Cause**: Incomplete removal of cooldown functionality when switching to smart distribution.
-**Fix**: Removed all cooldown-related code and interfaces.
+### 2. Investment Profit Distribution Button Disabled
+
+**Problem**: The "Run Distribution" button was disabled when there were no active investments.
+**Root Cause**: Button was disabled based on `activeInvestments.length === 0` condition.
+**Fix**: Removed the length check so the button is only disabled during processing, matching the live trade button behavior.
+
+### 3. SmartDistributionService Database Schema Issues
+
+**Problem**: Multiple database column mismatches in the profit distribution logic.
+**Root Cause**: Inconsistent column names and missing required columns in INSERT statements.
+**Fixes**:
+
+- Updated `getEligibleInvestments()` to use `DATE(pd.distribution_date)` instead of `DATE(pd.created_at)`
+- Fixed `distributeInvestmentProfit()` to include both `amount` and `profit_amount` columns in the INSERT statement
+
+### 4. Previous Issues (Already Fixed)
+
+- 500 Server Error on Admin Login (SmartDistributionService table names)
+- Profit Distribution Buttons Not Working (Missing confirmation dialog)
+- Outdated Cooldown System References (Removed cooldown code)
 
 ## Files Modified
 
-### 1. `lib/smartDistributionService.ts`
-- Fixed table name from `live_trades` to `user_live_trades`
-- Added proper JOIN with `live_trade_plans` table
-- Updated profit distribution logic to use correct column names
-- Fixed transaction types to use supported values
+### 1. `src/app/api/admin/investments/route.ts`
+
+- **Fixed**: Changed `pd.created_at >= ui.start_date` to `pd.distribution_date >= DATE(ui.start_date)` in the investment query
+- **Purpose**: Ensures correct date comparison for counting completed profit distributions
 
 ### 2. `src/app/admin/profit-distribution/page.tsx`
-- Added missing confirmation dialog component
-- Removed obsolete cooldown system code
-- Cleaned up state management interfaces
 
-### 3. `src/app/api/admin/investments/route.ts`
-- Enhanced error handling with detailed error messages
-- Added specific database error detection
+- **Fixed**: Removed `activeInvestments.length === 0` condition from button disabled state
+- **Purpose**: Investment profit distribution button is now enabled regardless of active investment count
 
-### 4. `src/app/api/admin/profit-distribution/route.ts`
-- Enhanced error logging with stack traces
-- Added admin email to error logs for debugging
+### 3. `lib/smartDistributionService.ts`
 
-### 5. `src/app/api/admin/live-trade/profit-distribution/route.ts`
-- Enhanced error handling and logging
-- Added detailed error information for debugging
+- **Fixed**: Changed `DATE(pd.created_at) = CURRENT_DATE` to `DATE(pd.distribution_date) = CURRENT_DATE` in `getEligibleInvestments()`
+- **Fixed**: Updated INSERT statement to include both `amount` and `profit_amount` columns:
+  ```sql
+  INSERT INTO profit_distributions (user_id, investment_id, amount, profit_amount, distribution_date, created_at)
+  VALUES ($1, $2, $3, $4, CURRENT_DATE, NOW())
+  ```
+- **Purpose**: Ensures proper database schema compliance and prevents SQL errors
+
+### 4. Previous Files (Already Fixed)
+
+- `src/app/api/admin/profit-distribution/route.ts` - Enhanced error logging
+- `src/app/api/admin/live-trade/profit-distribution/route.ts` - Enhanced error handling
 
 ## Testing Instructions
 
-### 1. Test Admin Login
-1. Navigate to `/auth/signin`
-2. Login with admin credentials
-3. Verify redirect to `/admin/dashboard`
+### 1. Test Investment Data Fetching (Primary Fix)
 
-### 2. Test Investment Data Fetching
-1. Navigate to `/admin/investments`
-2. Verify investment data loads without 500 errors
-3. Check browser console for any error messages
+1. Navigate to `/admin/profit-distribution` as an admin user
+2. Verify the page loads without "Failed to get investment data" error
+3. Check that investment statistics display correctly
+4. Verify no 500 errors in browser console or server logs
 
-### 3. Test Profit Distribution Buttons
+### 2. Test Investment Profit Distribution Button (Primary Fix)
+
 1. Navigate to `/admin/profit-distribution`
-2. Click "Run Distribution" button
-3. Verify confirmation dialog appears
-4. Test both "Cancel" and "Confirm" actions
-5. Click "Run Live Trade Profits" button
-6. Verify confirmation dialog appears and works
+2. Verify the "Run Distribution" button is enabled (not grayed out)
+3. Click "Run Distribution" button
+4. Verify confirmation dialog appears with proper message
+5. Test both "Cancel" and "Confirm" actions
+6. Upon confirmation, verify the distribution process executes
+7. Check for success/error messages after execution
 
-### 4. Test Error Handling
-1. Check server logs for detailed error information
-2. Verify enhanced error messages in API responses
-3. Test with invalid data to ensure proper error handling
+### 3. Test Live Trade Distribution (Should Still Work)
+
+1. Click "Run Live Trade Profits" button
+2. Verify confirmation dialog appears and works correctly
+3. Ensure live trade distribution still functions as before
+
+### 4. Test Database Operations
+
+1. Check server logs for any SQL errors during profit distribution
+2. Verify profit_distributions table receives correct data
+3. Ensure user balances are updated properly
+4. Check transaction records are created correctly
 
 ## Expected Behavior After Fixes
 
-### Investment Fetching
-- Should load without 500 errors
-- Should display investment data properly
-- Should show enhanced error messages if issues occur
+### Investment Data Fetching
 
-### Profit Distribution
-- Buttons should show confirmation dialogs
-- Should execute profit distribution when confirmed
-- Should display success/error messages appropriately
-- Should work for both investment and live trade distributions
+- ✅ Admin profit distribution page loads without "Failed to get investment data" error
+- ✅ Investment statistics display correctly
+- ✅ No 500 server errors when fetching investment data
 
-### Error Handling
-- Server logs should contain detailed error information
-- API responses should include helpful error details
-- Database errors should be properly categorized
+### Investment Profit Distribution Button
+
+- ✅ "Run Distribution" button is enabled regardless of active investment count
+- ✅ Clicking button shows confirmation dialog
+- ✅ Confirmation dialog works identically to live trade distribution
+- ✅ Upon confirmation, executes profit distribution process
+- ✅ Shows appropriate success/error messages
+
+### Database Operations
+
+- ✅ Profit distributions are recorded with correct schema (amount + profit_amount)
+- ✅ Date comparisons use correct column names (distribution_date)
+- ✅ No SQL errors during profit distribution execution
+- ✅ User balances and transactions are updated correctly
 
 ## Database Requirements
 
 Ensure these tables exist in your production database:
+
 - `user_investments`
 - `investment_plans`
 - `user_live_trades`
@@ -108,6 +135,7 @@ Ensure these tables exist in your production database:
 ## Monitoring
 
 After deployment, monitor:
+
 - Server error logs for any remaining 500 errors
 - Admin user feedback on functionality
 - Profit distribution execution success rates
