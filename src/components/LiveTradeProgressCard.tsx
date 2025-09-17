@@ -38,17 +38,44 @@ export default function LiveTradeProgressCard({
 
   // Update current time every minute for real-time progress (only for active trades)
   useEffect(() => {
-    // Don't update timer for completed or cancelled trades
-    if (trade.status === "completed" || trade.status === "cancelled") {
-      return;
-    }
+    // Check effective status to determine if we should update the timer
+    const checkAndUpdateTimer = () => {
+      const startTime = new Date(trade.start_time);
+      const totalDurationMs = trade.duration_hours * 60 * 60 * 1000;
+      const expectedEndTime = new Date(startTime.getTime() + totalDurationMs);
+      const now = new Date();
 
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000); // Update every minute
+      // Don't update timer for completed, cancelled trades, or trades that have exceeded duration
+      if (
+        trade.status === "completed" ||
+        trade.status === "cancelled" ||
+        trade.end_time ||
+        now >= expectedEndTime
+      ) {
+        return;
+      }
 
-    return () => clearInterval(timer);
-  }, [trade.status]);
+      const timer = setInterval(() => {
+        const currentTime = new Date();
+        setCurrentTime(currentTime);
+
+        // Stop timer if trade should be completed
+        const newExpectedEndTime = new Date(
+          startTime.getTime() + totalDurationMs
+        );
+        if (currentTime >= newExpectedEndTime) {
+          clearInterval(timer);
+        }
+      }, 60000); // Update every minute
+
+      return timer;
+    };
+
+    const timer = checkAndUpdateTimer();
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [trade.status, trade.end_time, trade.start_time, trade.duration_hours]);
 
   // Fetch hourly profit details
   useEffect(() => {
@@ -70,39 +97,66 @@ export default function LiveTradeProgressCard({
     }
   };
 
+  // Helper function to determine the effective status based on time
+  const getEffectiveStatus = () => {
+    if (trade.status === "cancelled") return "cancelled";
+    if (trade.status === "completed" || trade.end_time) return "completed";
+
+    // Check if trade should be completed based on duration
+    const startTime = new Date(trade.start_time);
+    const totalDurationMs = trade.duration_hours * 60 * 60 * 1000;
+    const expectedEndTime = new Date(startTime.getTime() + totalDurationMs);
+
+    if (currentTime >= expectedEndTime) {
+      return "completed";
+    }
+
+    return "active";
+  };
+
   const calculateProgress = () => {
     const startTime = new Date(trade.start_time);
     const endTime = trade.end_time ? new Date(trade.end_time) : null;
     const totalDurationMs = trade.duration_hours * 60 * 60 * 1000;
+    const effectiveStatus = getEffectiveStatus();
 
-    if (trade.status === "completed" || endTime) {
+    if (effectiveStatus === "completed" || endTime) {
       return 100;
     }
 
-    if (trade.status === "cancelled") {
+    if (effectiveStatus === "cancelled") {
       return 0;
     }
 
-    if (trade.status !== "active") {
+    if (effectiveStatus !== "active") {
       return 0;
     }
 
     const elapsedMs = currentTime.getTime() - startTime.getTime();
     const progress = Math.min((elapsedMs / totalDurationMs) * 100, 100);
 
-    // If trade has exceeded duration but status is still active, show 100%
-    if (progress >= 100) {
-      return 100;
-    }
-
     return Math.max(progress, 0);
   };
 
   const getTimeElapsed = () => {
     const startTime = new Date(trade.start_time);
-    const endTime = trade.end_time ? new Date(trade.end_time) : currentTime;
-    const elapsedMs = endTime.getTime() - startTime.getTime();
+    const effectiveStatus = getEffectiveStatus();
 
+    // For completed trades, use end_time if available, otherwise calculate based on duration
+    let endTime;
+    if (effectiveStatus === "completed") {
+      if (trade.end_time) {
+        endTime = new Date(trade.end_time);
+      } else {
+        // Calculate expected end time based on duration
+        const totalDurationMs = trade.duration_hours * 60 * 60 * 1000;
+        endTime = new Date(startTime.getTime() + totalDurationMs);
+      }
+    } else {
+      endTime = currentTime;
+    }
+
+    const elapsedMs = endTime.getTime() - startTime.getTime();
     const hours = Math.floor(elapsedMs / (1000 * 60 * 60));
     const minutes = Math.floor((elapsedMs % (1000 * 60 * 60)) / (1000 * 60));
 
@@ -110,16 +164,18 @@ export default function LiveTradeProgressCard({
   };
 
   const getTimeRemaining = () => {
-    if (trade.status === "completed") return "Completed";
-    if (trade.status === "cancelled") return "Cancelled";
-    if (trade.status !== "active") return "N/A";
+    const effectiveStatus = getEffectiveStatus();
+
+    if (effectiveStatus === "completed") return "Completed";
+    if (effectiveStatus === "cancelled") return "Cancelled";
+    if (effectiveStatus !== "active") return "N/A";
 
     const startTime = new Date(trade.start_time);
     const totalDurationMs = trade.duration_hours * 60 * 60 * 1000;
     const endTime = new Date(startTime.getTime() + totalDurationMs);
     const remainingMs = endTime.getTime() - currentTime.getTime();
 
-    if (remainingMs <= 0) return "Should be Completed";
+    if (remainingMs <= 0) return "Completed";
 
     const hours = Math.floor(remainingMs / (1000 * 60 * 60));
     const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
@@ -136,7 +192,8 @@ export default function LiveTradeProgressCard({
   };
 
   const getStatusIcon = () => {
-    switch (trade.status) {
+    const effectiveStatus = getEffectiveStatus();
+    switch (effectiveStatus) {
       case "active":
         return <Activity className="w-5 h-5 text-green-500" />;
       case "completed":
@@ -149,7 +206,8 @@ export default function LiveTradeProgressCard({
   };
 
   const getStatusColor = () => {
-    switch (trade.status) {
+    const effectiveStatus = getEffectiveStatus();
+    switch (effectiveStatus) {
       case "active":
         return "bg-green-100 text-green-800";
       case "completed":
@@ -190,7 +248,8 @@ export default function LiveTradeProgressCard({
           <span
             className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor()}`}
           >
-            {trade.status.charAt(0).toUpperCase() + trade.status.slice(1)}
+            {getEffectiveStatus().charAt(0).toUpperCase() +
+              getEffectiveStatus().slice(1)}
           </span>
         </div>
       </div>
@@ -204,9 +263,9 @@ export default function LiveTradeProgressCard({
         <div className="w-full bg-gray-200 rounded-full h-3">
           <div
             className={`h-3 rounded-full transition-all duration-300 ${
-              trade.status === "active"
+              getEffectiveStatus() === "active"
                 ? "bg-green-500"
-                : trade.status === "completed"
+                : getEffectiveStatus() === "completed"
                   ? "bg-blue-500"
                   : "bg-gray-400"
             }`}
@@ -302,17 +361,19 @@ export default function LiveTradeProgressCard({
             {new Date(trade.start_time).toLocaleString()}
           </span>
         </div>
-        {trade.status === "active" && (
+        {getEffectiveStatus() === "active" && (
           <div className="flex justify-between">
             <span className="text-gray-500">Expected Completion:</span>
             <span className="font-medium">{getExpectedCompletion()}</span>
           </div>
         )}
-        {trade.end_time && (
+        {(trade.end_time || getEffectiveStatus() === "completed") && (
           <div className="flex justify-between">
             <span className="text-gray-500">Completed:</span>
             <span className="font-medium">
-              {new Date(trade.end_time).toLocaleString()}
+              {trade.end_time
+                ? new Date(trade.end_time).toLocaleString()
+                : getExpectedCompletion()}
             </span>
           </div>
         )}

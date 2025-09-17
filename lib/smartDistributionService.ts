@@ -188,75 +188,182 @@ export class SmartDistributionService {
    * Get investments that are eligible for today's profit distribution
    */
   private static async getEligibleInvestments() {
-    const result = await db.query(`
-      SELECT 
-        ui.id,
-        ui.user_id,
-        ui.amount,
-        ui.daily_profit_rate,
-        ui.duration_days,
-        ui.start_date,
-        ui.end_date,
-        u.email,
-        u.first_name,
-        u.last_name
-      FROM user_investments ui
-      JOIN users u ON ui.user_id = u.id
-      WHERE ui.status = 'active'
-        AND ui.end_date > NOW()
-        AND NOT EXISTS (
-          SELECT 1 FROM profit_distributions pd
-          WHERE pd.user_id = ui.user_id
-            AND pd.investment_id = ui.id
-            AND DATE(pd.distribution_date) = CURRENT_DATE
-        )
-      ORDER BY ui.created_at ASC
-    `);
+    try {
+      // First, try to check if profit_distributions table exists
+      const tableExistsResult = await db.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables
+          WHERE table_schema = 'public'
+          AND table_name = 'profit_distributions'
+        );
+      `);
 
-    return result.rows.map((row) => ({
-      ...row,
-      amount: parseFloat(row.amount),
-      daily_profit_rate: parseFloat(row.daily_profit_rate),
-    }));
+      const tableExists = tableExistsResult.rows[0].exists;
+
+      let query;
+      if (tableExists) {
+        // Use the profit_distributions table to check for existing distributions
+        query = `
+          SELECT
+            ui.id,
+            ui.user_id,
+            ui.amount,
+            ui.daily_profit_rate,
+            ui.duration_days,
+            ui.start_date,
+            ui.end_date,
+            u.email,
+            u.first_name,
+            u.last_name
+          FROM user_investments ui
+          JOIN users u ON ui.user_id = u.id
+          WHERE ui.status = 'active'
+            AND ui.end_date > NOW()
+            AND NOT EXISTS (
+              SELECT 1 FROM profit_distributions pd
+              WHERE pd.user_id = ui.user_id
+                AND pd.investment_id = ui.id
+                AND DATE(pd.distribution_date) = CURRENT_DATE
+            )
+          ORDER BY ui.created_at ASC
+        `;
+      } else {
+        // Fallback: get all active investments (table doesn't exist yet)
+        console.log(
+          "profit_distributions table does not exist, returning all active investments"
+        );
+        query = `
+          SELECT
+            ui.id,
+            ui.user_id,
+            ui.amount,
+            ui.daily_profit_rate,
+            ui.duration_days,
+            ui.start_date,
+            ui.end_date,
+            u.email,
+            u.first_name,
+            u.last_name
+          FROM user_investments ui
+          JOIN users u ON ui.user_id = u.id
+          WHERE ui.status = 'active'
+            AND ui.end_date > NOW()
+          ORDER BY ui.created_at ASC
+        `;
+      }
+
+      const result = await db.query(query);
+
+      return result.rows.map((row) => ({
+        ...row,
+        amount: parseFloat(row.amount),
+        daily_profit_rate: parseFloat(row.daily_profit_rate),
+      }));
+    } catch (error) {
+      console.error("Error in getEligibleInvestments:", error);
+      throw error;
+    }
   }
 
   /**
    * Get live trades that are eligible for this hour's profit distribution
    */
   private static async getEligibleLiveTrades() {
-    const result = await db.query(`
-      SELECT
-        ult.id,
-        ult.user_id,
-        ult.amount,
-        ltp.hourly_profit_rate,
-        ltp.duration_hours,
-        ult.start_time,
-        ult.end_time,
-        ult.status,
-        u.email,
-        u.first_name,
-        u.last_name,
-        EXTRACT(EPOCH FROM (NOW() - ult.start_time)) / 3600 as hours_elapsed
-      FROM user_live_trades ult
-      JOIN live_trade_plans ltp ON ult.live_trade_plan_id = ltp.id
-      JOIN users u ON ult.user_id = u.id
-      WHERE ult.status = 'active'
-        AND ult.start_time + INTERVAL '1 hour' * ltp.duration_hours > NOW()
-        AND NOT EXISTS (
-          SELECT 1 FROM hourly_live_trade_profits hltp
-          WHERE hltp.live_trade_id = ult.id
-            AND hltp.profit_hour = DATE_TRUNC('hour', NOW())
-        )
-      ORDER BY ult.start_time ASC
-    `);
+    try {
+      console.log("Searching for eligible live trades...");
 
-    return result.rows.map((row) => ({
-      ...row,
-      amount: parseFloat(row.amount),
-      hourly_profit_rate: parseFloat(row.hourly_profit_rate),
-      hours_elapsed: parseFloat(row.hours_elapsed),
-    }));
+      // First, get all active live trades to debug
+      const debugResult = await db.query(`
+        SELECT
+          ult.id,
+          ult.status,
+          ult.start_time,
+          ltp.duration_hours,
+          EXTRACT(EPOCH FROM (NOW() - ult.start_time)) / 3600 as hours_elapsed,
+          CASE
+            WHEN ult.start_time + INTERVAL '1 hour' * ltp.duration_hours <= NOW()
+            THEN true
+            ELSE false
+          END as is_expired
+        FROM user_live_trades ult
+        JOIN live_trade_plans ltp ON ult.live_trade_plan_id = ltp.id
+        WHERE ult.status = 'active'
+        ORDER BY ult.start_time ASC
+      `);
+
+      console.log(
+        `Found ${debugResult.rows.length} active live trades:`,
+        debugResult.rows.map((row) => ({
+          id: row.id,
+          status: row.status,
+          hours_elapsed: parseFloat(row.hours_elapsed).toFixed(2),
+          duration_hours: row.duration_hours,
+          is_expired: row.is_expired,
+        }))
+      );
+
+      // Now get trades that need profit distribution (including completed ones)
+      const result = await db.query(`
+        SELECT
+          ult.id,
+          ult.user_id,
+          ult.amount,
+          ltp.hourly_profit_rate,
+          ltp.duration_hours,
+          ult.start_time,
+          ult.end_time,
+          ult.status,
+          u.email,
+          u.first_name,
+          u.last_name,
+          EXTRACT(EPOCH FROM (NOW() - ult.start_time)) / 3600 as hours_elapsed,
+          CASE
+            WHEN ult.start_time + INTERVAL '1 hour' * ltp.duration_hours <= NOW()
+            THEN true
+            ELSE false
+          END as is_expired
+        FROM user_live_trades ult
+        JOIN live_trade_plans ltp ON ult.live_trade_plan_id = ltp.id
+        JOIN users u ON ult.user_id = u.id
+        WHERE ult.status IN ('active', 'completed')
+          AND ult.start_time <= NOW()
+          AND (
+            -- Active trades within duration that haven't received this hour's profit
+            (ult.status = 'active'
+             AND ult.start_time + INTERVAL '1 hour' * ltp.duration_hours > NOW()
+             AND NOT EXISTS (
+               SELECT 1 FROM hourly_live_trade_profits hltp
+               WHERE hltp.live_trade_id = ult.id
+                 AND DATE_TRUNC('hour', hltp.profit_hour) = DATE_TRUNC('hour', NOW())
+             ))
+            OR
+            -- Completed trades that might be missing final hour profits
+            (ult.status = 'completed'
+             AND ult.end_time IS NOT NULL
+             AND ult.start_time + INTERVAL '1 hour' * ltp.duration_hours <= NOW()
+             AND (
+               SELECT COUNT(*) FROM hourly_live_trade_profits hltp
+               WHERE hltp.live_trade_id = ult.id
+             ) < ltp.duration_hours)
+          )
+        ORDER BY ult.start_time ASC
+      `);
+
+      console.log(
+        `Found ${result.rows.length} eligible live trades for profit distribution`
+      );
+
+      return result.rows.map((row) => ({
+        ...row,
+        amount: parseFloat(row.amount),
+        hourly_profit_rate: parseFloat(row.hourly_profit_rate),
+        hours_elapsed: parseFloat(row.hours_elapsed),
+        is_expired: row.is_expired,
+      }));
+    } catch (error) {
+      console.error("Error in getEligibleLiveTrades:", error);
+      throw error;
+    }
   }
 
   /**
@@ -266,23 +373,51 @@ export class SmartDistributionService {
     return await db.transaction(async (client) => {
       const dailyProfit = investment.amount * investment.daily_profit_rate;
 
-      // Add profit to user's balance
+      // Add profit to user's balance (use user_balances table)
       await client.query(
-        `UPDATE users SET total_balance = total_balance + $1 WHERE id = $2`,
+        `UPDATE user_balances SET total_balance = total_balance + $1, updated_at = NOW() WHERE user_id = $2`,
         [dailyProfit, investment.user_id]
       );
 
-      // Record the profit distribution
-      await client.query(
-        `INSERT INTO profit_distributions (user_id, investment_id, amount, profit_amount, distribution_date, created_at)
-         VALUES ($1, $2, $3, $4, CURRENT_DATE, NOW())`,
-        [investment.user_id, investment.id, investment.amount, dailyProfit]
-      );
+      // Try to record the profit distribution (create table if it doesn't exist)
+      try {
+        await client.query(
+          `INSERT INTO profit_distributions (user_id, investment_id, amount, profit_amount, distribution_date, created_at)
+           VALUES ($1, $2, $3, $4, CURRENT_DATE, NOW())`,
+          [investment.user_id, investment.id, investment.amount, dailyProfit]
+        );
+      } catch (error: any) {
+        if (error.code === "42P01") {
+          // Table doesn't exist
+          console.log("Creating profit_distributions table...");
+          // Create the table
+          await client.query(`
+            CREATE TABLE IF NOT EXISTS profit_distributions (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              investment_id UUID NOT NULL REFERENCES user_investments(id) ON DELETE CASCADE,
+              user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              amount DECIMAL(15,2) NOT NULL,
+              profit_amount DECIMAL(15,2) NOT NULL,
+              distribution_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+              created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+          `);
+
+          // Try the insert again
+          await client.query(
+            `INSERT INTO profit_distributions (user_id, investment_id, amount, profit_amount, distribution_date, created_at)
+             VALUES ($1, $2, $3, $4, CURRENT_DATE, NOW())`,
+            [investment.user_id, investment.id, investment.amount, dailyProfit]
+          );
+        } else {
+          throw error;
+        }
+      }
 
       // Record transaction
       await client.query(
         `INSERT INTO transactions (user_id, type, amount, description, balance_type, status, created_at)
-         VALUES ($1, 'credit', $2, 'Daily Investment Profit', 'total', 'completed', NOW())`,
+         VALUES ($1, 'profit', $2, 'Deposit Alert', 'total', 'completed', NOW())`,
         [investment.user_id, dailyProfit]
       );
 
@@ -316,16 +451,16 @@ export class SmartDistributionService {
           [trade.id]
         );
 
-        // Return capital to user
+        // Return capital to user (use user_balances table)
         await client.query(
-          `UPDATE users SET total_balance = total_balance + $1 WHERE id = $2`,
+          `UPDATE user_balances SET total_balance = total_balance + $1, updated_at = NOW() WHERE user_id = $2`,
           [trade.amount, trade.user_id]
         );
 
         // Record capital return transaction
         await client.query(
           `INSERT INTO transactions (user_id, type, amount, description, balance_type, status, created_at)
-           VALUES ($1, 'profit', $2, 'Live Trade Capital Return', 'total', 'completed', NOW())`,
+           VALUES ($1, 'credit', $2, 'Live Trade Capital Return', 'total', 'completed', NOW())`,
           [trade.user_id, trade.amount]
         );
 
@@ -334,9 +469,9 @@ export class SmartDistributionService {
           `Completed live trade ${trade.id} and returned capital of $${trade.amount}`
         );
       } else {
-        // Distribute hourly profit
+        // Distribute hourly profit (use user_balances table)
         await client.query(
-          `UPDATE users SET total_balance = total_balance + $1 WHERE id = $2`,
+          `UPDATE user_balances SET total_balance = total_balance + $1, updated_at = NOW() WHERE user_id = $2`,
           [hourlyProfit, trade.user_id]
         );
 
@@ -350,7 +485,7 @@ export class SmartDistributionService {
         // Record transaction
         await client.query(
           `INSERT INTO transactions (user_id, type, amount, description, balance_type, status, created_at)
-           VALUES ($1, 'profit', $2, 'Live Trade Hourly Profit', 'total', 'completed', NOW())`,
+           VALUES ($1, 'profit', $2, 'Deposit Alert', 'total', 'completed', NOW())`,
           [trade.user_id, hourlyProfit]
         );
 

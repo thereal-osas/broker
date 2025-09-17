@@ -73,20 +73,23 @@ export class LiveTradeStatusService {
     try {
       const result = await db.query(
         `
-        SELECT 
-          lt.*,
-          EXTRACT(EPOCH FROM (NOW() - lt.start_time)) / 3600 as hours_elapsed,
-          CASE 
-            WHEN EXTRACT(EPOCH FROM (NOW() - lt.start_time)) / 3600 >= lt.duration_hours THEN true
+        SELECT
+          ult.*,
+          ltp.hourly_profit_rate,
+          ltp.duration_hours,
+          EXTRACT(EPOCH FROM (NOW() - ult.start_time)) / 3600 as hours_elapsed,
+          CASE
+            WHEN EXTRACT(EPOCH FROM (NOW() - ult.start_time)) / 3600 >= ltp.duration_hours THEN true
             ELSE false
           END as is_expired,
           COALESCE(
-            (SELECT SUM(profit_amount) FROM hourly_live_trade_profits 
-             WHERE live_trade_id = lt.id), 
+            (SELECT SUM(profit_amount) FROM hourly_live_trade_profits
+             WHERE live_trade_id = ult.id),
             0
           ) as total_profits_earned
-        FROM live_trades lt
-        WHERE lt.id = $1
+        FROM user_live_trades ult
+        JOIN live_trade_plans ltp ON ult.live_trade_plan_id = ltp.id
+        WHERE ult.id = $1
       `,
         [tradeId]
       );
@@ -112,20 +115,23 @@ export class LiveTradeStatusService {
   static async getAllLiveTradesWithStatus(): Promise<LiveTradeStatus[]> {
     try {
       const result = await db.query(`
-        SELECT 
-          lt.*,
-          EXTRACT(EPOCH FROM (NOW() - lt.start_time)) / 3600 as hours_elapsed,
-          CASE 
-            WHEN EXTRACT(EPOCH FROM (NOW() - lt.start_time)) / 3600 >= lt.duration_hours THEN true
+        SELECT
+          ult.*,
+          ltp.hourly_profit_rate,
+          ltp.duration_hours,
+          EXTRACT(EPOCH FROM (NOW() - ult.start_time)) / 3600 as hours_elapsed,
+          CASE
+            WHEN EXTRACT(EPOCH FROM (NOW() - ult.start_time)) / 3600 >= ltp.duration_hours THEN true
             ELSE false
           END as is_expired,
           COALESCE(
-            (SELECT SUM(profit_amount) FROM hourly_live_trade_profits 
-             WHERE live_trade_id = lt.id), 
+            (SELECT SUM(profit_amount) FROM hourly_live_trade_profits
+             WHERE live_trade_id = ult.id),
             0
           ) as total_profits_earned
-        FROM live_trades lt
-        ORDER BY lt.start_time DESC
+        FROM user_live_trades ult
+        JOIN live_trade_plans ltp ON ult.live_trade_plan_id = ltp.id
+        ORDER BY ult.start_time DESC
       `);
 
       return result.rows.map((trade) => this.enhanceTradeStatus(trade));
@@ -140,15 +146,16 @@ export class LiveTradeStatusService {
    */
   private static async getActiveLiveTrades() {
     const result = await db.query(`
-      SELECT 
-        id,
-        user_id,
-        amount,
-        duration_hours,
-        start_time
-      FROM live_trades 
-      WHERE status = 'active'
-      ORDER BY start_time ASC
+      SELECT
+        ult.id,
+        ult.user_id,
+        ult.amount,
+        ltp.duration_hours,
+        ult.start_time
+      FROM user_live_trades ult
+      JOIN live_trade_plans ltp ON ult.live_trade_plan_id = ltp.id
+      WHERE ult.status = 'active'
+      ORDER BY ult.start_time ASC
     `);
 
     return result.rows.map((row) => ({
@@ -169,13 +176,13 @@ export class LiveTradeStatusService {
     return await db.transaction(async (client) => {
       // Update trade status to completed
       await client.query(
-        `UPDATE live_trades SET status = 'completed', end_time = NOW() WHERE id = $1`,
+        `UPDATE user_live_trades SET status = 'completed', end_time = NOW(), updated_at = NOW() WHERE id = $1`,
         [tradeId]
       );
 
-      // Return capital to user
+      // Return capital to user's total balance
       await client.query(
-        `UPDATE users SET total_balance = total_balance + $1 WHERE id = $2`,
+        `UPDATE user_balances SET total_balance = total_balance + $1, updated_at = NOW() WHERE user_id = $2`,
         [amount, userId]
       );
 
@@ -263,9 +270,9 @@ export class LiveTradeStatusService {
       // Get trade details
       const result = await db.query(
         `
-        SELECT id, user_id, amount, status 
-        FROM live_trades 
-        WHERE id = $1
+        SELECT ult.id, ult.user_id, ult.amount, ult.status
+        FROM user_live_trades ult
+        WHERE ult.id = $1
       `,
         [tradeId]
       );
