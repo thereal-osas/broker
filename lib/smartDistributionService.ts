@@ -370,52 +370,24 @@ export class SmartDistributionService {
    * Distribute profit for a single investment
    */
   private static async distributeInvestmentProfit(investment: any) {
-    return await db.transaction(async (client) => {
-      const dailyProfit = investment.amount * investment.daily_profit_rate;
+    const dailyProfit = investment.amount * investment.daily_profit_rate;
 
+    try {
       // Add profit to user's balance (use user_balances table)
-      await client.query(
+      await db.query(
         `UPDATE user_balances SET total_balance = total_balance + $1, updated_at = NOW() WHERE user_id = $2`,
         [dailyProfit, investment.user_id]
       );
 
-      // Try to record the profit distribution (create table if it doesn't exist)
-      try {
-        await client.query(
-          `INSERT INTO profit_distributions (user_id, investment_id, amount, profit_amount, distribution_date, created_at)
-           VALUES ($1, $2, $3, $4, CURRENT_DATE, NOW())`,
-          [investment.user_id, investment.id, investment.amount, dailyProfit]
-        );
-      } catch (error: any) {
-        if (error.code === "42P01") {
-          // Table doesn't exist
-          console.log("Creating profit_distributions table...");
-          // Create the table
-          await client.query(`
-            CREATE TABLE IF NOT EXISTS profit_distributions (
-              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-              investment_id UUID NOT NULL REFERENCES user_investments(id) ON DELETE CASCADE,
-              user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-              amount DECIMAL(15,2) NOT NULL,
-              profit_amount DECIMAL(15,2) NOT NULL,
-              distribution_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-              created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-          `);
-
-          // Try the insert again
-          await client.query(
-            `INSERT INTO profit_distributions (user_id, investment_id, amount, profit_amount, distribution_date, created_at)
-             VALUES ($1, $2, $3, $4, CURRENT_DATE, NOW())`,
-            [investment.user_id, investment.id, investment.amount, dailyProfit]
-          );
-        } else {
-          throw error;
-        }
-      }
+      // Record the profit distribution
+      await db.query(
+        `INSERT INTO profit_distributions (user_id, investment_id, amount, profit_amount, distribution_date, created_at)
+         VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        [investment.user_id, investment.id, investment.amount, dailyProfit]
+      );
 
       // Record transaction
-      await client.query(
+      await db.query(
         `INSERT INTO transactions (user_id, type, amount, description, balance_type, status, created_at)
          VALUES ($1, 'profit', $2, 'Deposit Alert', 'total', 'completed', NOW())`,
         [investment.user_id, dailyProfit]
@@ -425,7 +397,13 @@ export class SmartDistributionService {
         `Distributed daily profit of $${dailyProfit} for investment ${investment.id}`
       );
       return { success: true };
-    });
+    } catch (error) {
+      console.error(
+        `Error distributing profit for investment ${investment.id}:`,
+        error
+      );
+      throw error;
+    }
   }
 
   /**
@@ -434,31 +412,31 @@ export class SmartDistributionService {
   private static async distributeLiveTradeProfit(
     trade: any
   ): Promise<{ completed: boolean }> {
-    return await db.transaction(async (client) => {
-      const currentHour = new Date();
-      currentHour.setMinutes(0, 0, 0); // Round to current hour
-      const hourlyProfit = trade.amount * trade.hourly_profit_rate;
-      let completed = false;
+    const currentHour = new Date();
+    currentHour.setMinutes(0, 0, 0); // Round to current hour
+    const hourlyProfit = trade.amount * trade.hourly_profit_rate;
+    let completed = false;
 
+    try {
       // Check if trade should be completed (duration exceeded)
       const tradeEndTime = new Date(
         trade.start_time.getTime() + trade.duration_hours * 60 * 60 * 1000
       );
       if (currentHour >= tradeEndTime) {
         // Complete the trade and return capital
-        await client.query(
+        await db.query(
           `UPDATE user_live_trades SET status = 'completed', end_time = NOW() WHERE id = $1`,
           [trade.id]
         );
 
         // Return capital to user (use user_balances table)
-        await client.query(
+        await db.query(
           `UPDATE user_balances SET total_balance = total_balance + $1, updated_at = NOW() WHERE user_id = $2`,
           [trade.amount, trade.user_id]
         );
 
         // Record capital return transaction
-        await client.query(
+        await db.query(
           `INSERT INTO transactions (user_id, type, amount, description, balance_type, status, created_at)
            VALUES ($1, 'credit', $2, 'Live Trade Capital Return', 'total', 'completed', NOW())`,
           [trade.user_id, trade.amount]
@@ -470,20 +448,20 @@ export class SmartDistributionService {
         );
       } else {
         // Distribute hourly profit (use user_balances table)
-        await client.query(
+        await db.query(
           `UPDATE user_balances SET total_balance = total_balance + $1, updated_at = NOW() WHERE user_id = $2`,
           [hourlyProfit, trade.user_id]
         );
 
         // Record hourly profit
-        await client.query(
+        await db.query(
           `INSERT INTO hourly_live_trade_profits (live_trade_id, profit_amount, profit_hour, created_at)
            VALUES ($1, $2, $3, NOW())`,
           [trade.id, hourlyProfit, currentHour.toISOString()]
         );
 
         // Record transaction
-        await client.query(
+        await db.query(
           `INSERT INTO transactions (user_id, type, amount, description, balance_type, status, created_at)
            VALUES ($1, 'profit', $2, 'Deposit Alert', 'total', 'completed', NOW())`,
           [trade.user_id, hourlyProfit]
@@ -495,6 +473,12 @@ export class SmartDistributionService {
       }
 
       return { completed };
-    });
+    } catch (error) {
+      console.error(
+        `Error distributing profit for live trade ${trade.id}:`,
+        error
+      );
+      throw error;
+    }
   }
 }

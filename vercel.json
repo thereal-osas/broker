@@ -6,5 +6,11 @@
   },
   "env": {
     "NODE_ENV": "production"
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/daily-profits",
+      "schedule": "0 9 * * *"
+    }
+  ]
 }
