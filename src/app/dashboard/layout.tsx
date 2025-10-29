@@ -176,7 +176,7 @@ export default function DashboardLayout({
           {/* Show deactivation banner for deactivated users */}
           {session?.user && !session.user.isActive && (
             <div className="p-6 pb-0">
-              <DeactivationBanner userEmail={session.user.email} />
+              <DeactivationBanner />
             </div>
           )}
           <div className={shouldShowOverlay ? "blur-sm pointer-events-none" : ""}>
@@ -195,7 +195,7 @@ export default function DashboardLayout({
 
       {/* Deactivation overlay for restricted access */}
       {shouldShowOverlay && (
-        <DeactivationOverlay userEmail={session.user.email} />
+        <DeactivationOverlay />
       )}
     </div>
   );

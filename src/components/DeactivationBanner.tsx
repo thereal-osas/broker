@@ -5,11 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, X, MessageCircle, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
 
-interface DeactivationBannerProps {
-  userEmail: string;
-}
-
-export default function DeactivationBanner({ userEmail }: DeactivationBannerProps) {
+export default function DeactivationBanner() {
   const [isVisible, setIsVisible] = useState(true);
 
   if (!isVisible) return null;

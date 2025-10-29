@@ -4,11 +4,7 @@ import { motion } from "framer-motion";
 import { AlertTriangle, MessageCircle, Lock } from "lucide-react";
 import Link from "next/link";
 
-interface DeactivationOverlayProps {
-  userEmail: string;
-}
-
-export default function DeactivationOverlay({ userEmail }: DeactivationOverlayProps) {
+export default function DeactivationOverlay() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
       <motion.div

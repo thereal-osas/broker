@@ -34,7 +34,6 @@ export default function LiveTradeProgressCard({
 }: LiveTradeProgressProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [hourlyProfits, setHourlyProfits] = useState<any[]>([]);
-  const [isLoadingProfits, setIsLoadingProfits] = useState(false);
 
   // Update current time every minute for real-time progress (only for active trades)
   useEffect(() => {
@@ -78,7 +77,6 @@ export default function LiveTradeProgressCard({
   }, [trade.status, trade.end_time, trade.start_time, trade.duration_hours]);
 
   const fetchHourlyProfits = useCallback(async () => {
-    setIsLoadingProfits(true);
     try {
       const response = await fetch(`/api/live-trade/profits/${trade.id}`);
       if (response.ok) {
@@ -87,8 +85,6 @@ export default function LiveTradeProgressCard({
       }
     } catch (error) {
       console.error("Error fetching hourly profits:", error);
-    } finally {
-      setIsLoadingProfits(false);
     }
   }, [trade.id]);
 

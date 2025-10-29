@@ -71,7 +71,7 @@ export default function SupportPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     if (status === "loading") return;
