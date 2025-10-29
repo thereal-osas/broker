@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Clock,
   TrendingUp,
@@ -77,12 +77,7 @@ export default function LiveTradeProgressCard({
     };
   }, [trade.status, trade.end_time, trade.start_time, trade.duration_hours]);
 
-  // Fetch hourly profit details
-  useEffect(() => {
-    fetchHourlyProfits();
-  }, [trade.id]);
-
-  const fetchHourlyProfits = async () => {
+  const fetchHourlyProfits = useCallback(async () => {
     setIsLoadingProfits(true);
     try {
       const response = await fetch(`/api/live-trade/profits/${trade.id}`);
@@ -95,7 +90,12 @@ export default function LiveTradeProgressCard({
     } finally {
       setIsLoadingProfits(false);
     }
-  };
+  }, [trade.id]);
+
+  // Fetch hourly profit details
+  useEffect(() => {
+    fetchHourlyProfits();
+  }, [fetchHourlyProfits]);
 
   // Helper function to determine the effective status based on time
   const getEffectiveStatus = () => {

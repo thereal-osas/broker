@@ -3,9 +3,6 @@
 import { motion } from "framer-motion";
 import {
   DollarSign,
-  TrendingUp,
-  CreditCard,
-  Gift,
   Star,
   Wallet,
 } from "lucide-react";

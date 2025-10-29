@@ -58,8 +58,7 @@ export function EnhancedDistributionButton({
 }: EnhancedDistributionButtonProps) {
   const isInvestment = type === "investment";
   const title = isInvestment ? "Investment Profits" : "Live Trade Profits";
-  const cooldownType = isInvestment ? "24 hours" : "1 hour";
-  
+
   const isDisabled = state.isProcessing || (state.cooldown?.isOnCooldown ?? false);
   
   const getButtonColor = () => {

@@ -13,14 +13,6 @@ interface ActiveLiveTrade {
   is_expired?: boolean; // Optional for enhanced queries
 }
 
-interface LiveTradeProfitDistribution {
-  live_trade_id: string;
-  user_id: string;
-  amount: number;
-  profit_amount: number;
-  profit_hour: string;
-}
-
 export class LiveTradeProfitService {
   /**
    * Calculate hourly profit for a live trade
