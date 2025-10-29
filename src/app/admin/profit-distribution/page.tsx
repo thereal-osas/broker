@@ -456,10 +456,15 @@ export default function ProfitDistributionPage() {
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-xl shadow-lg p-6 mb-8"
           >
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Last Distribution Result
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
+              <span>Last Investment Distribution Result</span>
+              <span className="text-sm font-normal text-gray-500">
+                {new Date(investmentState.result.timestamp).toLocaleString()}
+              </span>
             </h3>
-            <div className="grid grid-cols-3 gap-4">
+
+            {/* Summary Stats */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="text-center p-4 bg-green-50 rounded-lg">
                 <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
                 <p className="text-2xl font-bold text-green-600">
@@ -475,13 +480,46 @@ export default function ProfitDistributionPage() {
                 <p className="text-sm text-gray-600">Skipped</p>
               </div>
               <div className="text-center p-4 bg-red-50 rounded-lg">
-                <RefreshCw className="w-8 h-8 text-red-600 mx-auto mb-2" />
+                <XCircle className="w-8 h-8 text-red-600 mx-auto mb-2" />
                 <p className="text-2xl font-bold text-red-600">
                   {investmentState.result.errors}
                 </p>
                 <p className="text-sm text-gray-600">Errors</p>
               </div>
             </div>
+
+            {/* Message */}
+            <div className={`p-4 rounded-lg mb-4 ${
+              investmentState.result.success
+                ? 'bg-green-50 border border-green-200'
+                : 'bg-red-50 border border-red-200'
+            }`}>
+              <p className={`font-medium ${
+                investmentState.result.success ? 'text-green-800' : 'text-red-800'
+              }`}>
+                {investmentState.result.message}
+              </p>
+            </div>
+
+            {/* Details */}
+            {investmentState.result.details && investmentState.result.details.length > 0 && (
+              <div className="mt-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Distribution Details:</h4>
+                <div className="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
+                  <ul className="space-y-1 text-sm font-mono">
+                    {investmentState.result.details.map((detail, index) => (
+                      <li key={index} className={`${
+                        detail.includes('✅') ? 'text-green-700' :
+                        detail.includes('❌') ? 'text-red-700' :
+                        'text-gray-600'
+                      }`}>
+                        {detail}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -492,16 +530,21 @@ export default function ProfitDistributionPage() {
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-xl shadow-lg p-6 mb-8"
           >
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Last Live Trade Distribution Result
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
+              <span>Last Live Trade Distribution Result</span>
+              <span className="text-sm font-normal text-gray-500">
+                {new Date(liveTradeState.result.timestamp).toLocaleString()}
+              </span>
             </h3>
-            <div className="grid grid-cols-4 gap-4">
+
+            {/* Summary Stats */}
+            <div className="grid grid-cols-4 gap-4 mb-6">
               <div className="text-center p-4 bg-green-50 rounded-lg">
                 <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
                 <p className="text-2xl font-bold text-green-600">
                   {liveTradeState.result.processed}
                 </p>
-                <p className="text-sm text-gray-600">Processed</p>
+                <p className="text-sm text-gray-600">Trades Processed</p>
               </div>
               <div className="text-center p-4 bg-yellow-50 rounded-lg">
                 <Clock className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
@@ -511,7 +554,7 @@ export default function ProfitDistributionPage() {
                 <p className="text-sm text-gray-600">Skipped</p>
               </div>
               <div className="text-center p-4 bg-red-50 rounded-lg">
-                <RefreshCw className="w-8 h-8 text-red-600 mx-auto mb-2" />
+                <XCircle className="w-8 h-8 text-red-600 mx-auto mb-2" />
                 <p className="text-2xl font-bold text-red-600">
                   {liveTradeState.result.errors}
                 </p>
@@ -525,6 +568,39 @@ export default function ProfitDistributionPage() {
                 <p className="text-sm text-gray-600">Completed</p>
               </div>
             </div>
+
+            {/* Message */}
+            <div className={`p-4 rounded-lg mb-4 ${
+              liveTradeState.result.success
+                ? 'bg-green-50 border border-green-200'
+                : 'bg-red-50 border border-red-200'
+            }`}>
+              <p className={`font-medium ${
+                liveTradeState.result.success ? 'text-green-800' : 'text-red-800'
+              }`}>
+                {liveTradeState.result.message}
+              </p>
+            </div>
+
+            {/* Details */}
+            {liveTradeState.result.details && liveTradeState.result.details.length > 0 && (
+              <div className="mt-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Distribution Details:</h4>
+                <div className="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
+                  <ul className="space-y-1 text-sm font-mono">
+                    {liveTradeState.result.details.map((detail, index) => (
+                      <li key={index} className={`${
+                        detail.includes('✅') ? 'text-green-700' :
+                        detail.includes('❌') ? 'text-red-700' :
+                        'text-gray-600'
+                      }`}>
+                        {detail}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -640,16 +716,71 @@ export default function ProfitDistributionPage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
+            className="bg-white rounded-lg p-6 max-w-lg w-full mx-4"
           >
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Confirm Profit Distribution
-            </h3>
-            <p className="text-gray-600 mb-6">
-              {showConfirmDialog.type === "investment"
-                ? "Are you sure you want to run the investment profit distribution? This will distribute profits to all eligible active investments."
-                : "Are you sure you want to run the live trade profit distribution? This will distribute hourly profits to all eligible active live trades."}
-            </p>
+            <div className="flex items-center mb-4">
+              <AlertCircle className={`w-6 h-6 mr-3 ${
+                showConfirmDialog.type === "investment" ? "text-green-600" : "text-blue-600"
+              }`} />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Confirm Profit Distribution
+              </h3>
+            </div>
+
+            {showConfirmDialog.type === "investment" ? (
+              <div className="mb-6">
+                <p className="text-gray-700 mb-3 font-medium">
+                  Investment Profit Distribution (Daily)
+                </p>
+                <ul className="text-sm text-gray-600 space-y-2 bg-green-50 p-4 rounded-lg">
+                  <li className="flex items-start">
+                    <span className="mr-2">•</span>
+                    <span>Distributes daily profits to all eligible active investments</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="mr-2">•</span>
+                    <span>Only processes investments that haven't received today's profit</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="mr-2">•</span>
+                    <span>Automatically skips already-processed investments</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="mr-2">•</span>
+                    <span>Updates user balances and creates transaction records</span>
+                  </li>
+                </ul>
+              </div>
+            ) : (
+              <div className="mb-6">
+                <p className="text-gray-700 mb-3 font-medium">
+                  Live Trade Profit Distribution (Manual - All Elapsed Hours)
+                </p>
+                <ul className="text-sm text-gray-600 space-y-2 bg-blue-50 p-4 rounded-lg">
+                  <li className="flex items-start">
+                    <span className="mr-2">•</span>
+                    <span><strong>Calculates elapsed hours</strong> since last distribution for each trade</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="mr-2">•</span>
+                    <span><strong>Distributes ALL missing hours</strong> of profit in one operation</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="mr-2">•</span>
+                    <span>Example: If 5 hours passed, distributes 5 hours of profit</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="mr-2">•</span>
+                    <span>Automatically completes trades that reach their duration</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="mr-2">•</span>
+                    <span>Returns capital to users when trades complete</span>
+                  </li>
+                </ul>
+              </div>
+            )}
+
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() =>

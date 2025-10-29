@@ -95,6 +95,7 @@ export class SmartDistributionService {
 
   /**
    * Smart live trade profit distribution - only processes eligible trades
+   * Distributes ALL elapsed hours of profit since last distribution
    */
   static async runLiveTradeDistribution(
     adminEmail: string
@@ -104,7 +105,7 @@ export class SmartDistributionService {
     );
 
     try {
-      // Get all active live trades that are eligible for this hour's profit
+      // Get all active live trades that need profit distribution
       const eligibleTrades = await this.getEligibleLiveTrades();
 
       if (eligibleTrades.length === 0) {
@@ -116,13 +117,15 @@ export class SmartDistributionService {
           completed: 0,
           message: "No eligible live trades found",
           details: [
-            "All active live trades have already received this hour's profit",
+            "All active live trades have received all their profits",
           ],
           timestamp: new Date().toISOString(),
         };
       }
 
-      let processed = 0;
+      let totalHoursProcessed = 0;
+      let totalProfitDistributed = 0;
+      let tradesProcessed = 0;
       let completed = 0;
       let errors = 0;
       const details: string[] = [];
@@ -130,39 +133,45 @@ export class SmartDistributionService {
       for (const trade of eligibleTrades) {
         try {
           const result = await this.distributeLiveTradeProfit(trade);
-          processed++;
+          tradesProcessed++;
+          totalHoursProcessed += result.hoursDistributed;
+          totalProfitDistributed += result.totalProfit;
 
           if (result.completed) {
             completed++;
             details.push(
-              `Completed live trade ${trade.id} and returned capital to user ${trade.email}`
+              `✅ Completed trade ${trade.id} (${trade.email}): Distributed ${result.hoursDistributed} hours of profit ($${result.totalProfit.toFixed(2)}) + returned capital ($${trade.amount.toFixed(2)})`
             );
           } else {
             details.push(
-              `Distributed hourly profit for live trade ${trade.id} (User: ${trade.email})`
+              `✅ Trade ${trade.id} (${trade.email}): Distributed ${result.hoursDistributed} hours of profit ($${result.totalProfit.toFixed(2)})`
             );
           }
         } catch (error) {
           errors++;
           console.error(`Error processing live trade ${trade.id}:`, error);
           details.push(
-            `Failed to process live trade ${trade.id}: ${error instanceof Error ? error.message : "Unknown error"}`
+            `❌ Failed to process trade ${trade.id}: ${error instanceof Error ? error.message : "Unknown error"}`
           );
         }
       }
 
       return {
         success: true,
-        processed,
+        processed: tradesProcessed,
         skipped: 0,
         errors,
         completed,
-        message: `Live trade profit distribution completed`,
+        message: `Live trade profit distribution completed: ${totalHoursProcessed} hours processed, $${totalProfitDistributed.toFixed(2)} distributed`,
         details: [
           `Found ${eligibleTrades.length} eligible live trades`,
-          `Successfully processed: ${processed}`,
+          `Successfully processed: ${tradesProcessed} trades`,
+          `Total hours distributed: ${totalHoursProcessed}`,
+          `Total profit distributed: $${totalProfitDistributed.toFixed(2)}`,
           `Completed trades: ${completed}`,
           `Errors: ${errors}`,
+          "",
+          "Details:",
           ...details,
         ],
         timestamp: new Date().toISOString(),
@@ -266,43 +275,14 @@ export class SmartDistributionService {
   }
 
   /**
-   * Get live trades that are eligible for this hour's profit distribution
+   * Get live trades that need profit distribution
+   * Returns trades that have elapsed hours without profit distribution
    */
   private static async getEligibleLiveTrades() {
     try {
-      console.log("Searching for eligible live trades...");
+      console.log("🔍 Searching for eligible live trades...");
 
-      // First, get all active live trades to debug
-      const debugResult = await db.query(`
-        SELECT
-          ult.id,
-          ult.status,
-          ult.start_time,
-          ltp.duration_hours,
-          EXTRACT(EPOCH FROM (NOW() - ult.start_time)) / 3600 as hours_elapsed,
-          CASE
-            WHEN ult.start_time + INTERVAL '1 hour' * ltp.duration_hours <= NOW()
-            THEN true
-            ELSE false
-          END as is_expired
-        FROM user_live_trades ult
-        JOIN live_trade_plans ltp ON ult.live_trade_plan_id = ltp.id
-        WHERE ult.status = 'active'
-        ORDER BY ult.start_time ASC
-      `);
-
-      console.log(
-        `Found ${debugResult.rows.length} active live trades:`,
-        debugResult.rows.map((row) => ({
-          id: row.id,
-          status: row.status,
-          hours_elapsed: parseFloat(row.hours_elapsed).toFixed(2),
-          duration_hours: row.duration_hours,
-          is_expired: row.is_expired,
-        }))
-      );
-
-      // Now get trades that need profit distribution (including completed ones)
+      // Get all active live trades that have missing profit distributions
       const result = await db.query(`
         SELECT
           ult.id,
@@ -316,49 +296,53 @@ export class SmartDistributionService {
           u.email,
           u.first_name,
           u.last_name,
-          EXTRACT(EPOCH FROM (NOW() - ult.start_time)) / 3600 as hours_elapsed,
-          CASE
-            WHEN ult.start_time + INTERVAL '1 hour' * ltp.duration_hours <= NOW()
-            THEN true
-            ELSE false
-          END as is_expired
+          FLOOR(EXTRACT(EPOCH FROM (NOW() - ult.start_time)) / 3600) as hours_elapsed,
+          COALESCE(
+            (SELECT COUNT(*) FROM hourly_live_trade_profits hltp WHERE hltp.live_trade_id = ult.id),
+            0
+          ) as hours_distributed
         FROM user_live_trades ult
         JOIN live_trade_plans ltp ON ult.live_trade_plan_id = ltp.id
         JOIN users u ON ult.user_id = u.id
-        WHERE ult.status IN ('active', 'completed')
+        WHERE ult.status = 'active'
           AND ult.start_time <= NOW()
           AND (
-            -- Active trades within duration that haven't received this hour's profit
-            (ult.status = 'active'
-             AND ult.start_time + INTERVAL '1 hour' * ltp.duration_hours > NOW()
-             AND NOT EXISTS (
-               SELECT 1 FROM hourly_live_trade_profits hltp
-               WHERE hltp.live_trade_id = ult.id
-                 AND DATE_TRUNC('hour', hltp.profit_hour) = DATE_TRUNC('hour', NOW())
-             ))
-            OR
-            -- Completed trades that might be missing final hour profits
-            (ult.status = 'completed'
-             AND ult.end_time IS NOT NULL
-             AND ult.start_time + INTERVAL '1 hour' * ltp.duration_hours <= NOW()
-             AND (
-               SELECT COUNT(*) FROM hourly_live_trade_profits hltp
-               WHERE hltp.live_trade_id = ult.id
-             ) < ltp.duration_hours)
+            -- Has elapsed at least 1 hour
+            EXTRACT(EPOCH FROM (NOW() - ult.start_time)) / 3600 >= 1
+          )
+          AND (
+            -- Has missing profit distributions
+            COALESCE(
+              (SELECT COUNT(*) FROM hourly_live_trade_profits hltp WHERE hltp.live_trade_id = ult.id),
+              0
+            ) < LEAST(
+              FLOOR(EXTRACT(EPOCH FROM (NOW() - ult.start_time)) / 3600),
+              ltp.duration_hours
+            )
           )
         ORDER BY ult.start_time ASC
       `);
 
-      console.log(
-        `Found ${result.rows.length} eligible live trades for profit distribution`
-      );
+      console.log(`✅ Found ${result.rows.length} eligible live trades`);
+
+      if (result.rows.length > 0) {
+        console.log("Trade details:");
+        result.rows.forEach((row) => {
+          const hoursElapsed = parseInt(row.hours_elapsed);
+          const hoursDistributed = parseInt(row.hours_distributed);
+          const maxHours = Math.min(hoursElapsed, row.duration_hours);
+          const missingHours = maxHours - hoursDistributed;
+
+          console.log(`  - Trade ${row.id}: ${missingHours} hours pending (${hoursDistributed}/${maxHours} distributed)`);
+        });
+      }
 
       return result.rows.map((row) => ({
         ...row,
         amount: parseFloat(row.amount),
         hourly_profit_rate: parseFloat(row.hourly_profit_rate),
-        hours_elapsed: parseFloat(row.hours_elapsed),
-        is_expired: row.is_expired,
+        hours_elapsed: parseInt(row.hours_elapsed),
+        hours_distributed: parseInt(row.hours_distributed),
       }));
     } catch (error) {
       console.error("Error in getEligibleLiveTrades:", error);
@@ -407,47 +391,76 @@ export class SmartDistributionService {
   }
 
   /**
-   * Distribute profit for a single live trade and complete if necessary
+   * Distribute profit for a single live trade - handles ALL elapsed hours
+   * Calculates how many hours have passed and distributes profit for each hour
    */
   private static async distributeLiveTradeProfit(
     trade: any
-  ): Promise<{ completed: boolean }> {
-    const currentHour = new Date();
-    currentHour.setMinutes(0, 0, 0); // Round to current hour
+  ): Promise<{ completed: boolean; hoursDistributed: number; totalProfit: number }> {
+    const now = new Date();
+    const startTime = new Date(trade.start_time);
     const hourlyProfit = trade.amount * trade.hourly_profit_rate;
     let completed = false;
+    let hoursDistributed = 0;
+    let totalProfit = 0;
 
     try {
-      // Check if trade should be completed (duration exceeded)
+      console.log(`\n📊 Processing live trade ${trade.id}:`);
+      console.log(`  Amount: $${trade.amount}`);
+      console.log(`  Hourly rate: ${(trade.hourly_profit_rate * 100).toFixed(2)}%`);
+      console.log(`  Duration: ${trade.duration_hours} hours`);
+      console.log(`  Start time: ${startTime.toISOString()}`);
+
+      // Calculate trade end time
       const tradeEndTime = new Date(
-        trade.start_time.getTime() + trade.duration_hours * 60 * 60 * 1000
+        startTime.getTime() + trade.duration_hours * 60 * 60 * 1000
       );
-      if (currentHour >= tradeEndTime) {
-        // Complete the trade and return capital
-        await db.query(
-          `UPDATE user_live_trades SET status = 'completed', end_time = NOW() WHERE id = $1`,
-          [trade.id]
+      console.log(`  End time: ${tradeEndTime.toISOString()}`);
+
+      // Calculate how many hours have elapsed since start
+      const totalElapsedHours = Math.floor(
+        (now.getTime() - startTime.getTime()) / (1000 * 60 * 60)
+      );
+      console.log(`  Total elapsed hours: ${totalElapsedHours}`);
+
+      // Cap at duration hours
+      const maxHoursToDistribute = Math.min(totalElapsedHours, trade.duration_hours);
+      console.log(`  Max hours to distribute: ${maxHoursToDistribute}`);
+
+      // Get already distributed hours
+      const distributedResult = await db.query(
+        `SELECT COUNT(*) as count FROM hourly_live_trade_profits WHERE live_trade_id = $1`,
+        [trade.id]
+      );
+      const alreadyDistributed = parseInt(distributedResult.rows[0].count);
+      console.log(`  Already distributed: ${alreadyDistributed} hours`);
+
+      // Calculate hours that need distribution
+      const hoursToDistribute = maxHoursToDistribute - alreadyDistributed;
+      console.log(`  Hours to distribute now: ${hoursToDistribute}`);
+
+      if (hoursToDistribute <= 0) {
+        console.log(`  ⏭️  No hours to distribute`);
+
+        // Check if trade should be completed
+        if (now >= tradeEndTime && trade.status === 'active') {
+          await this.completeLiveTrade(trade);
+          completed = true;
+        }
+
+        return { completed, hoursDistributed: 0, totalProfit: 0 };
+      }
+
+      // Distribute profit for each missing hour
+      for (let i = 0; i < hoursToDistribute; i++) {
+        const hourNumber = alreadyDistributed + i + 1;
+        const profitHour = new Date(
+          startTime.getTime() + hourNumber * 60 * 60 * 1000
         );
 
-        // Return capital to user (use user_balances table)
-        await db.query(
-          `UPDATE user_balances SET total_balance = total_balance + $1, updated_at = NOW() WHERE user_id = $2`,
-          [trade.amount, trade.user_id]
-        );
+        console.log(`  💰 Distributing hour ${hourNumber}: ${profitHour.toISOString()}`);
 
-        // Record capital return transaction
-        await db.query(
-          `INSERT INTO transactions (user_id, type, amount, description, balance_type, status, created_at)
-           VALUES ($1, 'credit', $2, 'Live Trade Capital Return', 'total', 'completed', NOW())`,
-          [trade.user_id, trade.amount]
-        );
-
-        completed = true;
-        console.log(
-          `Completed live trade ${trade.id} and returned capital of $${trade.amount}`
-        );
-      } else {
-        // Distribute hourly profit (use user_balances table)
+        // Add profit to user balance
         await db.query(
           `UPDATE user_balances SET total_balance = total_balance + $1, updated_at = NOW() WHERE user_id = $2`,
           [hourlyProfit, trade.user_id]
@@ -457,22 +470,41 @@ export class SmartDistributionService {
         await db.query(
           `INSERT INTO hourly_live_trade_profits (live_trade_id, profit_amount, profit_hour, created_at)
            VALUES ($1, $2, $3, NOW())`,
-          [trade.id, hourlyProfit, currentHour.toISOString()]
+          [trade.id, hourlyProfit, profitHour.toISOString()]
         );
 
         // Record transaction
         await db.query(
           `INSERT INTO transactions (user_id, type, amount, description, balance_type, status, created_at)
-           VALUES ($1, 'profit', $2, 'Deposit Alert', 'total', 'completed', NOW())`,
-          [trade.user_id, hourlyProfit]
+           VALUES ($1, 'profit', $2, $3, 'total', 'completed', NOW())`,
+          [
+            trade.user_id,
+            hourlyProfit,
+            `Live Trade Hourly Profit (Hour ${hourNumber}/${trade.duration_hours})`
+          ]
         );
 
-        console.log(
-          `Distributed hourly profit of $${hourlyProfit} for live trade ${trade.id} at ${currentHour.toISOString()}`
+        // Update trade total profit
+        await db.query(
+          `UPDATE user_live_trades SET total_profit = total_profit + $1, updated_at = NOW() WHERE id = $2`,
+          [hourlyProfit, trade.id]
         );
+
+        hoursDistributed++;
+        totalProfit += hourlyProfit;
       }
 
-      return { completed };
+      console.log(`  ✅ Distributed ${hoursDistributed} hours, total: $${totalProfit.toFixed(2)}`);
+
+      // Check if trade should be completed (all hours distributed)
+      const totalDistributedNow = alreadyDistributed + hoursDistributed;
+      if (totalDistributedNow >= trade.duration_hours && trade.status === 'active') {
+        console.log(`  🏁 Trade completed - returning capital`);
+        await this.completeLiveTrade(trade);
+        completed = true;
+      }
+
+      return { completed, hoursDistributed, totalProfit };
     } catch (error) {
       console.error(
         `Error distributing profit for live trade ${trade.id}:`,
@@ -480,5 +512,33 @@ export class SmartDistributionService {
       );
       throw error;
     }
+  }
+
+  /**
+   * Complete a live trade and return capital to user
+   */
+  private static async completeLiveTrade(trade: any): Promise<void> {
+    // Update trade status
+    await db.query(
+      `UPDATE user_live_trades SET status = 'completed', end_time = NOW(), updated_at = NOW() WHERE id = $1`,
+      [trade.id]
+    );
+
+    // Return capital to user
+    await db.query(
+      `UPDATE user_balances SET total_balance = total_balance + $1, updated_at = NOW() WHERE user_id = $2`,
+      [trade.amount, trade.user_id]
+    );
+
+    // Record capital return transaction
+    await db.query(
+      `INSERT INTO transactions (user_id, type, amount, description, balance_type, status, created_at)
+       VALUES ($1, 'credit', $2, 'Live Trade Capital Return', 'total', 'completed', NOW())`,
+      [trade.user_id, trade.amount]
+    );
+
+    console.log(
+      `Completed live trade ${trade.id} and returned capital of $${trade.amount}`
+    );
   }
 }
