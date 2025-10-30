@@ -76,7 +76,7 @@ export default function AdminSupportPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, toast]);
 
   useEffect(() => {
     if (status === "loading") return;

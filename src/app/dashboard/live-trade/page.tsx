@@ -6,11 +6,9 @@ import { useRouter } from "next/navigation";
 import { useBalance } from "../../../hooks/useBalance";
 import {
   TrendingUp,
-  Clock,
   DollarSign,
   Activity,
   Play,
-  Pause,
   CheckCircle,
   RefreshCw,
 } from "lucide-react";
@@ -67,7 +65,7 @@ export default function UserLiveTradePage() {
   const [showInvestModal, setShowInvestModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<LiveTradePlan | null>(null);
   const [investAmount, setInvestAmount] = useState("");
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh] = useState(true);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -172,31 +170,7 @@ export default function UserLiveTradePage() {
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "active":
-        return <Activity className="w-4 h-4 text-green-600" />;
-      case "completed":
-        return <CheckCircle className="w-4 h-4 text-blue-600" />;
-      case "cancelled":
-        return <Pause className="w-4 h-4 text-red-600" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-600" />;
-    }
-  };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-green-100 text-green-800";
-      case "completed":
-        return "bg-blue-100 text-blue-800";
-      case "cancelled":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
 
   if (status === "loading" || isLoading) {
     return (

@@ -114,9 +114,6 @@ export default function AdminSettingsPage() {
     return <Shield className="w-5 h-5" />;
   };
 
-  // Get all settings as flat array for easier access
-  const allSettings = Object.values(settingsByCategory).flat();
-
   if (status === 'loading' || isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">

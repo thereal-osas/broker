@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { 
-  FileText, 
-  Calendar, 
-  User, 
+import Image from 'next/image';
+import {
+  FileText,
+  Calendar,
+  User,
   ChevronRight,
   Mail,
   Clock,
@@ -126,15 +127,18 @@ export default function NewslettersPage() {
             {selectedNewsletter.image_url && (
               <div className="mb-8">
                 {selectedNewsletter.image_url.startsWith('data:') ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={selectedNewsletter.image_url}
                     alt={selectedNewsletter.title}
                     className="w-full max-w-2xl mx-auto rounded-lg shadow-md"
                   />
                 ) : (
-                  <img
+                  <Image
                     src={selectedNewsletter.image_url}
                     alt={selectedNewsletter.title}
+                    width={800}
+                    height={400}
                     className="w-full max-w-2xl mx-auto rounded-lg shadow-md"
                   />
                 )}
@@ -220,11 +224,12 @@ export default function NewslettersPage() {
 
                       {/* Newsletter Image Preview */}
                       {newsletter.image_url && (
-                        <div className="mb-4">
-                          <img
+                        <div className="mb-4 relative w-full max-w-md h-32">
+                          <Image
                             src={newsletter.image_url}
                             alt={newsletter.title}
-                            className="w-full max-w-md h-32 object-cover rounded-lg"
+                            fill
+                            className="object-cover rounded-lg"
                           />
                         </div>
                       )}

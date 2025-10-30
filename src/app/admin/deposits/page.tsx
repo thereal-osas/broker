@@ -316,6 +316,7 @@ export default function AdminDeposits() {
                   <div>
                     <p className="text-sm text-gray-600 mb-2">Payment Screenshot:</p>
                     {selectedDeposit.payment_proof_image.startsWith('data:') ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={selectedDeposit.payment_proof_image}
                         alt="Payment proof"

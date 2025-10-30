@@ -20,7 +20,7 @@ export async function PUT(
 
     const { id } = params;
     const body = await request.json();
-    const { status, adminNotes } = body;
+    const { status } = body;
 
     // Check if investment exists
     const checkQuery = `

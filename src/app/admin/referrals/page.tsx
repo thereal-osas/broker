@@ -57,7 +57,7 @@ export default function AdminReferralsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     if (status === "loading") return;

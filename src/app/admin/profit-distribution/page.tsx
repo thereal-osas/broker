@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   TrendingUp,
   Play,
@@ -13,8 +13,6 @@ import {
   Calendar,
   CheckCircle,
   Clock,
-  Timer,
-  Loader2,
   AlertCircle,
   XCircle,
 } from "lucide-react";
@@ -74,30 +72,6 @@ export default function ProfitDistributionPage() {
     isOpen: boolean;
   }>({ type: null, isOpen: false });
 
-  // State for investments data
-  const [investments, setInvestments] = useState<any[]>([]);
-  const [investmentsLoading, setInvestmentsLoading] = useState(true);
-
-  // Fetch investments data
-  const fetchInvestments = useCallback(async () => {
-    try {
-      setInvestmentsLoading(true);
-      const response = await fetch("/api/admin/investments");
-      if (response.ok) {
-        const data = await response.json();
-        setInvestments(data.investments || []);
-      } else {
-        console.error("Failed to fetch investments");
-        toast.error("Failed to load investments data");
-      }
-    } catch (error) {
-      console.error("Error fetching investments:", error);
-      toast.error("Error loading investments data");
-    } finally {
-      setInvestmentsLoading(false);
-    }
-  }, [toast]);
-
   // Note: Cooldown system removed - using smart distribution now
 
   const fetchActiveInvestments = useCallback(async () => {
@@ -113,7 +87,7 @@ export default function ProfitDistributionPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -161,11 +135,10 @@ export default function ProfitDistributionPage() {
       if (result.success) {
         toast.success(result.message);
         fetchActiveInvestments();
-        fetchInvestments();
       } else {
         toast.error(result.message);
       }
-    } catch (error) {
+    } catch {
       const errorResult: DistributionResult = {
         success: false,
         processed: 0,
@@ -234,7 +207,7 @@ export default function ProfitDistributionPage() {
       } else {
         toast.error(result.message);
       }
-    } catch (error) {
+    } catch {
       const errorResult: DistributionResult = {
         success: false,
         processed: 0,
@@ -275,8 +248,7 @@ export default function ProfitDistributionPage() {
   // Initial data fetch
   useEffect(() => {
     fetchActiveInvestments();
-    fetchInvestments();
-  }, [fetchActiveInvestments, fetchInvestments]);
+  }, [fetchActiveInvestments]);
 
   const calculateDailyProfit = (amount: number, rate: number) => {
     return amount * rate;
@@ -739,7 +711,7 @@ export default function ProfitDistributionPage() {
                   </li>
                   <li className="flex items-start">
                     <span className="mr-2">•</span>
-                    <span>Only processes investments that haven't received today's profit</span>
+                    <span>Only processes investments that haven&apos;t received today&apos;s profit</span>
                   </li>
                   <li className="flex items-start">
                     <span className="mr-2">•</span>

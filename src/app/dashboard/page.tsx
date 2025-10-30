@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { useBalance } from "../../hooks/useBalance";
 
@@ -14,8 +14,7 @@ import ProfitHistory from "../../components/dashboard/ProfitHistory";
 export default function UserDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { balance, isLoading: balanceLoading, refreshBalance } = useBalance();
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const { balance, isLoading: balanceLoading } = useBalance();
 
   useEffect(() => {
     if (status === "loading") return;
@@ -95,7 +94,7 @@ export default function UserDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <UserInvestments refreshTrigger={refreshTrigger} />
+          <UserInvestments />
         </motion.div>
 
         {/* Profit History */}

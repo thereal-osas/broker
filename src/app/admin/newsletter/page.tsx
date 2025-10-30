@@ -349,6 +349,7 @@ export default function AdminNewsletterPage() {
                     {imagePreview && (
                       <div className="mt-2">
                         {imagePreview.startsWith('data:') ? (
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={imagePreview}
                             alt="Newsletter preview"
