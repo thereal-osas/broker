@@ -75,6 +75,7 @@ export class LiveTradeStatusService {
         `
         SELECT
           ult.*,
+          ltp.name as plan_name,
           ltp.hourly_profit_rate,
           ltp.duration_hours,
           EXTRACT(EPOCH FROM (NOW() - ult.start_time)) / 3600 as hours_elapsed,
@@ -117,6 +118,7 @@ export class LiveTradeStatusService {
       const result = await db.query(`
         SELECT
           ult.*,
+          ltp.name as plan_name,
           ltp.hourly_profit_rate,
           ltp.duration_hours,
           EXTRACT(EPOCH FROM (NOW() - ult.start_time)) / 3600 as hours_elapsed,
