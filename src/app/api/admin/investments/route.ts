@@ -16,12 +16,12 @@ export async function GET() {
 
     // Get all active investments with user details
     const result = await db.query(`
-      SELECT 
+      SELECT
         ui.id,
         ui.user_id,
         ui.amount,
-        ui.daily_profit_rate,
-        ui.duration_days,
+        ip.daily_profit_rate,
+        ip.duration_days,
         ui.start_date,
         ui.end_date,
         ui.status,
@@ -37,14 +37,14 @@ export async function GET() {
            AND pd.distribution_date >= DATE(ui.start_date)),
           0
         ) as days_completed,
-        CASE 
+        CASE
           WHEN ui.end_date <= NOW() THEN 'expired'
           WHEN ui.status = 'active' THEN 'active'
           ELSE ui.status
         END as current_status
       FROM user_investments ui
       JOIN users u ON ui.user_id = u.id
-      LEFT JOIN investment_plans ip ON ui.plan_id = ip.id
+      JOIN investment_plans ip ON ui.plan_id = ip.id
       WHERE ui.status = 'active'
       ORDER BY ui.created_at DESC
     `);

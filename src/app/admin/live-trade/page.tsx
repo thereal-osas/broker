@@ -161,8 +161,9 @@ export default function AdminLiveTradePage() {
       const response = await fetch("/api/admin/live-trade/trades");
       if (response.ok) {
         const data = await response.json();
-        setUserTrades(data);
-        return data;
+        const trades = data.trades || data || [];
+        setUserTrades(trades);
+        return trades;
       }
     } catch (error) {
       console.error("Error fetching user live trades:", error);

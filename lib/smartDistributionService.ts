@@ -217,8 +217,8 @@ export class SmartDistributionService {
             ui.id,
             ui.user_id,
             ui.amount,
-            ui.daily_profit_rate,
-            ui.duration_days,
+            ip.daily_profit_rate,
+            ip.duration_days,
             ui.start_date,
             ui.end_date,
             u.email,
@@ -226,6 +226,7 @@ export class SmartDistributionService {
             u.last_name
           FROM user_investments ui
           JOIN users u ON ui.user_id = u.id
+          JOIN investment_plans ip ON ui.plan_id = ip.id
           WHERE ui.status = 'active'
             AND ui.end_date > NOW()
             AND NOT EXISTS (
@@ -246,8 +247,8 @@ export class SmartDistributionService {
             ui.id,
             ui.user_id,
             ui.amount,
-            ui.daily_profit_rate,
-            ui.duration_days,
+            ip.daily_profit_rate,
+            ip.duration_days,
             ui.start_date,
             ui.end_date,
             u.email,
@@ -255,6 +256,7 @@ export class SmartDistributionService {
             u.last_name
           FROM user_investments ui
           JOIN users u ON ui.user_id = u.id
+          JOIN investment_plans ip ON ui.plan_id = ip.id
           WHERE ui.status = 'active'
             AND ui.end_date > NOW()
           ORDER BY ui.created_at ASC
