@@ -112,8 +112,8 @@ export async function POST(request: NextRequest) {
       name,
       description,
       min_amount,
-      max_amount,
-      daily_profit_rate,
+      max_amount || null,
+      daily_profit_rate / 100, // Convert percentage to decimal
       duration_days,
       is_active,
     ];

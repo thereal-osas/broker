@@ -50,7 +50,14 @@ export async function PUT(
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
         updateFields.push(`${field} = $${paramCount}`);
-        values.push(body[field]);
+        // Convert daily_profit_rate from percentage to decimal
+        if (field === "daily_profit_rate") {
+          values.push(body[field] / 100);
+        } else if (field === "max_amount" && body[field] === 0) {
+          values.push(null);
+        } else {
+          values.push(body[field]);
+        }
         paramCount++;
       }
     }
