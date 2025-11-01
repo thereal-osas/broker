@@ -13,7 +13,7 @@ export interface DistributionResult {
 
 export class SmartDistributionService {
   /**
-   * Smart investment profit distribution - only processes eligible investments
+   * Smart investment profit distribution - processes ALL missed days for eligible investments
    */
   static async runInvestmentDistribution(
     adminEmail: string
@@ -23,7 +23,7 @@ export class SmartDistributionService {
     );
 
     try {
-      // Get all active investments that are eligible for today's profit
+      // Get all active investments that have missing profit distributions
       const eligibleInvestments = await this.getEligibleInvestments();
 
       if (eligibleInvestments.length === 0) {
@@ -34,22 +34,27 @@ export class SmartDistributionService {
           errors: 0,
           message: "No eligible investments found",
           details: [
-            "All active investments have already received today's profit",
+            "All active investments have received all their daily profits",
           ],
           timestamp: new Date().toISOString(),
         };
       }
 
-      let processed = 0;
+      let totalDaysProcessed = 0;
+      let totalProfitDistributed = 0;
+      let investmentsProcessed = 0;
       let errors = 0;
       const details: string[] = [];
 
       for (const investment of eligibleInvestments) {
         try {
-          await this.distributeInvestmentProfit(investment);
-          processed++;
+          const result = await this.distributeInvestmentProfit(investment);
+          investmentsProcessed++;
+          totalDaysProcessed += result.daysDistributed;
+          totalProfitDistributed += result.totalProfit;
+
           details.push(
-            `Distributed profit for investment ${investment.id} (User: ${investment.email})`
+            `✅ Investment ${investment.id} (${investment.email}): Distributed ${result.daysDistributed} day(s) of profit ($${result.totalProfit.toFixed(2)})`
           );
         } catch (error) {
           errors++;
@@ -58,21 +63,25 @@ export class SmartDistributionService {
             error
           );
           details.push(
-            `Failed to distribute profit for investment ${investment.id}: ${error instanceof Error ? error.message : "Unknown error"}`
+            `❌ Failed to process investment ${investment.id}: ${error instanceof Error ? error.message : "Unknown error"}`
           );
         }
       }
 
       return {
         success: true,
-        processed,
+        processed: investmentsProcessed,
         skipped: 0,
         errors,
-        message: `Investment profit distribution completed`,
+        message: `Investment profit distribution completed: ${totalDaysProcessed} day(s) processed, $${totalProfitDistributed.toFixed(2)} distributed`,
         details: [
           `Found ${eligibleInvestments.length} eligible investments`,
-          `Successfully processed: ${processed}`,
+          `Successfully processed: ${investmentsProcessed} investments`,
+          `Total days distributed: ${totalDaysProcessed}`,
+          `Total profit distributed: $${totalProfitDistributed.toFixed(2)}`,
           `Errors: ${errors}`,
+          "",
+          "Details:",
           ...details,
         ],
         timestamp: new Date().toISOString(),
@@ -194,10 +203,13 @@ export class SmartDistributionService {
   }
 
   /**
-   * Get investments that are eligible for today's profit distribution
+   * Get investments that are eligible for profit distribution
+   * Returns investments that have missing daily profit distributions
    */
   private static async getEligibleInvestments() {
     try {
+      console.log("🔍 Searching for eligible investments...");
+
       // First, try to check if profit_distributions table exists
       const tableExistsResult = await db.query(`
         SELECT EXISTS (
@@ -211,7 +223,8 @@ export class SmartDistributionService {
 
       let query;
       if (tableExists) {
-        // Use the profit_distributions table to check for existing distributions
+        // Get all active investments with their distribution counts
+        // This allows us to detect investments with missing days
         query = `
           SELECT
             ui.id,
@@ -223,17 +236,35 @@ export class SmartDistributionService {
             ui.end_date,
             u.email,
             u.first_name,
-            u.last_name
+            u.last_name,
+            DATE(ui.start_date) as start_date_only,
+            CURRENT_DATE as current_date,
+            (CURRENT_DATE - DATE(ui.start_date)) as days_elapsed,
+            COALESCE(
+              (SELECT COUNT(DISTINCT DATE(pd.distribution_date))
+               FROM profit_distributions pd
+               WHERE pd.user_id = ui.user_id
+                 AND pd.investment_id = ui.id),
+              0
+            ) as days_distributed
           FROM user_investments ui
           JOIN users u ON ui.user_id = u.id
           JOIN investment_plans ip ON ui.plan_id = ip.id
           WHERE ui.status = 'active'
             AND ui.end_date > NOW()
-            AND NOT EXISTS (
-              SELECT 1 FROM profit_distributions pd
-              WHERE pd.user_id = ui.user_id
-                AND pd.investment_id = ui.id
-                AND DATE(pd.distribution_date) = CURRENT_DATE
+            AND DATE(ui.start_date) < CURRENT_DATE
+            AND (
+              -- Has missing profit distributions
+              COALESCE(
+                (SELECT COUNT(DISTINCT DATE(pd.distribution_date))
+                 FROM profit_distributions pd
+                 WHERE pd.user_id = ui.user_id
+                   AND pd.investment_id = ui.id),
+                0
+              ) < LEAST(
+                (CURRENT_DATE - DATE(ui.start_date)),
+                ip.duration_days
+              )
             )
           ORDER BY ui.created_at ASC
         `;
@@ -253,22 +284,43 @@ export class SmartDistributionService {
             ui.end_date,
             u.email,
             u.first_name,
-            u.last_name
+            u.last_name,
+            DATE(ui.start_date) as start_date_only,
+            CURRENT_DATE as current_date,
+            (CURRENT_DATE - DATE(ui.start_date)) as days_elapsed,
+            0 as days_distributed
           FROM user_investments ui
           JOIN users u ON ui.user_id = u.id
           JOIN investment_plans ip ON ui.plan_id = ip.id
           WHERE ui.status = 'active'
             AND ui.end_date > NOW()
+            AND DATE(ui.start_date) < CURRENT_DATE
           ORDER BY ui.created_at ASC
         `;
       }
 
       const result = await db.query(query);
 
+      console.log(`✅ Found ${result.rows.length} eligible investments`);
+
+      if (result.rows.length > 0) {
+        console.log("Investment details:");
+        result.rows.forEach((row) => {
+          const daysElapsed = parseInt(row.days_elapsed);
+          const daysDistributed = parseInt(row.days_distributed);
+          const maxDays = Math.min(daysElapsed, row.duration_days);
+          const missingDays = maxDays - daysDistributed;
+
+          console.log(`  - Investment ${row.id}: ${missingDays} days pending (${daysDistributed}/${maxDays} distributed)`);
+        });
+      }
+
       return result.rows.map((row) => ({
         ...row,
         amount: parseFloat(row.amount),
         daily_profit_rate: parseFloat(row.daily_profit_rate),
+        days_elapsed: parseInt(row.days_elapsed),
+        days_distributed: parseInt(row.days_distributed),
       }));
     } catch (error) {
       console.error("Error in getEligibleInvestments:", error);
@@ -353,36 +405,125 @@ export class SmartDistributionService {
   }
 
   /**
-   * Distribute profit for a single investment
+   * Distribute profit for a single investment - handles ALL missed days
+   * Calculates how many days have passed and distributes profit for each day
    */
-  private static async distributeInvestmentProfit(investment: any) {
+  private static async distributeInvestmentProfit(
+    investment: any
+  ): Promise<{ daysDistributed: number; totalProfit: number }> {
     const dailyProfit = investment.amount * investment.daily_profit_rate;
+    let daysDistributed = 0;
+    let totalProfit = 0;
 
     try {
-      // Add profit to user's balance (use user_balances table)
-      await db.query(
-        `UPDATE user_balances SET total_balance = total_balance + $1, updated_at = NOW() WHERE user_id = $2`,
-        [dailyProfit, investment.user_id]
+      console.log(`\n📊 Processing investment ${investment.id}:`);
+      console.log(`  Amount: $${investment.amount}`);
+      console.log(`  Daily rate: ${(investment.daily_profit_rate * 100).toFixed(4)}%`);
+      console.log(`  Duration: ${investment.duration_days} days`);
+      console.log(`  Start date: ${investment.start_date}`);
+
+      // Calculate investment end date
+      const startDate = new Date(investment.start_date);
+      const endDate = new Date(investment.end_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Normalize to start of day
+
+      console.log(`  End date: ${endDate.toISOString()}`);
+
+      // Calculate how many days have elapsed since start
+      const startDateOnly = new Date(startDate);
+      startDateOnly.setHours(0, 0, 0, 0);
+
+      const totalElapsedDays = Math.floor(
+        (today.getTime() - startDateOnly.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      console.log(`  Total elapsed days: ${totalElapsedDays}`);
+
+      // Cap at duration days
+      const maxDaysToDistribute = Math.min(totalElapsedDays, investment.duration_days);
+      console.log(`  Max days to distribute: ${maxDaysToDistribute}`);
+
+      // Get already distributed days
+      const distributedResult = await db.query(
+        `SELECT COUNT(DISTINCT DATE(distribution_date)) as count
+         FROM profit_distributions
+         WHERE user_id = $1 AND investment_id = $2`,
+        [investment.user_id, investment.id]
+      );
+      const alreadyDistributed = parseInt(distributedResult.rows[0].count);
+      console.log(`  Already distributed: ${alreadyDistributed} days`);
+
+      // Calculate days that need distribution
+      const daysToDistribute = maxDaysToDistribute - alreadyDistributed;
+      console.log(`  Days to distribute now: ${daysToDistribute}`);
+
+      if (daysToDistribute <= 0) {
+        console.log(`  ⏭️  No days to distribute`);
+        return { daysDistributed: 0, totalProfit: 0 };
+      }
+
+      // Get list of dates that already have distributions
+      const existingDatesResult = await db.query(
+        `SELECT DISTINCT DATE(distribution_date) as dist_date
+         FROM profit_distributions
+         WHERE user_id = $1 AND investment_id = $2
+         ORDER BY dist_date`,
+        [investment.user_id, investment.id]
+      );
+      const existingDates = new Set(
+        existingDatesResult.rows.map(row => row.dist_date.toISOString().split('T')[0])
       );
 
-      // Record the profit distribution
-      await db.query(
-        `INSERT INTO profit_distributions (user_id, investment_id, amount, profit_amount, distribution_date, created_at)
-         VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-        [investment.user_id, investment.id, investment.amount, dailyProfit]
-      );
+      // Distribute profit for each missing day
+      for (let dayOffset = 0; dayOffset < maxDaysToDistribute; dayOffset++) {
+        const distributionDate = new Date(startDateOnly);
+        distributionDate.setDate(distributionDate.getDate() + dayOffset + 1); // +1 because first profit is on day after start
+        const dateStr = distributionDate.toISOString().split('T')[0];
 
-      // Record transaction
-      await db.query(
-        `INSERT INTO transactions (user_id, type, amount, description, balance_type, status, created_at)
-         VALUES ($1, 'profit', $2, 'Deposit Alert', 'total', 'completed', NOW())`,
-        [investment.user_id, dailyProfit]
-      );
+        // Skip if this date already has a distribution
+        if (existingDates.has(dateStr)) {
+          continue;
+        }
 
-      console.log(
-        `Distributed daily profit of $${dailyProfit} for investment ${investment.id}`
-      );
-      return { success: true };
+        console.log(`  💰 Distributing day ${dayOffset + 1}: ${dateStr}`);
+
+        // Add profit to user balance
+        await db.query(
+          `UPDATE user_balances SET total_balance = total_balance + $1, updated_at = NOW() WHERE user_id = $2`,
+          [dailyProfit, investment.user_id]
+        );
+
+        // Record the profit distribution with the specific date
+        await db.query(
+          `INSERT INTO profit_distributions (user_id, investment_id, amount, profit_amount, distribution_date, created_at)
+           VALUES ($1, $2, $3, $4, $5, NOW())`,
+          [investment.user_id, investment.id, investment.amount, dailyProfit, distributionDate]
+        );
+
+        // Record transaction
+        await db.query(
+          `INSERT INTO transactions (user_id, type, amount, description, balance_type, status, created_at)
+           VALUES ($1, 'profit', $2, $3, 'total', 'completed', NOW())`,
+          [
+            investment.user_id,
+            dailyProfit,
+            `Investment Daily Profit (Day ${dayOffset + 1}/${investment.duration_days})`
+          ]
+        );
+
+        // Update investment total profit
+        await db.query(
+          `UPDATE user_investments SET total_profit = total_profit + $1, updated_at = NOW() WHERE id = $2`,
+          [dailyProfit, investment.id]
+        );
+
+        daysDistributed++;
+        totalProfit += dailyProfit;
+      }
+
+      console.log(`  ✅ Distributed ${daysDistributed} days, total: $${totalProfit.toFixed(2)}`);
+
+      return { daysDistributed, totalProfit };
     } catch (error) {
       console.error(
         `Error distributing profit for investment ${investment.id}:`,
