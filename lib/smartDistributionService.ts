@@ -462,30 +462,14 @@ export class SmartDistributionService {
         return { daysDistributed: 0, totalProfit: 0 };
       }
 
-      // Get list of dates that already have distributions
-      const existingDatesResult = await db.query(
-        `SELECT DISTINCT DATE(distribution_date) as dist_date
-         FROM profit_distributions
-         WHERE user_id = $1 AND investment_id = $2
-         ORDER BY dist_date`,
-        [investment.user_id, investment.id]
-      );
-      const existingDates = new Set(
-        existingDatesResult.rows.map(row => row.dist_date.toISOString().split('T')[0])
-      );
-
       // Distribute profit for each missing day
-      for (let dayOffset = 0; dayOffset < maxDaysToDistribute; dayOffset++) {
+      // Loop only through the MISSING days (not all days)
+      for (let i = 0; i < daysToDistribute; i++) {
+        const dayNumber = alreadyDistributed + i + 1;
         const distributionDate = new Date(startDateOnly);
-        distributionDate.setDate(distributionDate.getDate() + dayOffset + 1); // +1 because first profit is on day after start
-        const dateStr = distributionDate.toISOString().split('T')[0];
+        distributionDate.setDate(distributionDate.getDate() + dayNumber);
 
-        // Skip if this date already has a distribution
-        if (existingDates.has(dateStr)) {
-          continue;
-        }
-
-        console.log(`  💰 Distributing day ${dayOffset + 1}: ${dateStr}`);
+        console.log(`  💰 Distributing day ${dayNumber}: ${distributionDate.toISOString().split('T')[0]}`);
 
         // Add profit to user balance
         await db.query(
@@ -507,7 +491,7 @@ export class SmartDistributionService {
           [
             investment.user_id,
             dailyProfit,
-            `Investment Daily Profit (Day ${dayOffset + 1}/${investment.duration_days})`
+            `Investment Daily Profit (Day ${dayNumber}/${investment.duration_days})`
           ]
         );
 
