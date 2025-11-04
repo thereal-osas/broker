@@ -44,23 +44,23 @@ export default function Home() {
   const features = [
     {
       icon: TrendingUp,
-      title: "Smart Investments",
-      description: "AI-powered investment strategies with guaranteed returns",
+      title: "Seamless Crypto Transactions",
+      description: "Send and receive crptocurrency with unmatched ease and security through our optimized transaction system.",
     },
     {
       icon: Shield,
-      title: "Secure Platform",
-      description: "Bank-level security with 256-bit encryption",
+      title: "70% Loss Coverage",
+      description: "Trade and invest with confidence. At CredCrypto, we cover 70% of losses, minimizing your risk and ensuring a safer investment experience.",
     },
     {
       icon: DollarSign,
-      title: "Multiple Balances",
-      description: "Total, Profit, Deposit, Bonus & Credit Score tracking",
+      title: "Fiat-Crypto Bridge",
+      description: "Enjoy smooth conversions between USD, EUR, empowering you to operate freely across both traditional and digital financial ecosystems.",
     },
     {
       icon: Users,
-      title: "Referral Program",
-      description: "Earn commissions by referring new investors",
+      title: "Cloud Trading & Mining",
+      description: "Access real-time expert trading calls and efficient mining through our advanced pool merge system; maximizing performance and profitability.",
     },
   ];
 
@@ -103,7 +103,7 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             className="text-5xl md:text-7xl font-bold text-white mb-6"
           >
-            Invest Smart,
+            Trade Smart,
             <span className="bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent">
               {" "}
               Earn More
@@ -116,8 +116,8 @@ export default function Home() {
             transition={{ delay: 0.1 }}
             className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto"
           >
-            Join thousands of investors earning consistent returns with our
-            AI-powered investment platform. Start with as little as $100 and
+            Join thousands of traders earning consistent returns with our
+            AI-powered trading platform. Start with as little as $100 and
             watch your portfolio grow.
           </motion.p>
 
@@ -131,7 +131,7 @@ export default function Home() {
               href="/auth/signup"
               className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:from-orange-600 hover:to-orange-700 transition-all flex items-center group"
             >
-              Start Investing Today
+              Start Trading Today
               <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
@@ -159,7 +159,7 @@ export default function Home() {
             </h2>
             <p className="text-xl text-gray-400 max-w-2xl mx-auto">
               Our platform combines cutting-edge technology with proven
-              investment strategies
+              trading strategies
             </p>
           </motion.div>
 
@@ -193,10 +193,10 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
           >
             <h2 className="text-4xl font-bold text-white mb-4">
-              Ready to Start Your Investment Journey?
+              Ready to Start Your Trading Journey?
             </h2>
             <p className="text-xl text-gray-300 mb-8">
-              Join thousands of successful investors and start building your
+              Join thousands of successful traders and start building your
               wealth today
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -227,8 +227,8 @@ export default function Home() {
             <span className="text-xl font-bold text-white">CredCrypto</span>
           </div>
           <p className="text-gray-400 mb-4">
-            Empowering investors worldwide with smart, secure, and profitable
-            investment solutions.
+            Empowering traders worldwide with smart, secure, and profitable
+            trading solutions.
           </p>
           <p className="text-gray-500 text-sm">
             © 2024 CredCrypto. All rights reserved.
