@@ -24,18 +24,18 @@ interface DepositRequest {
   created_at: string;
 }
 
-// Cryptocurrency wallet addresses from environment variables
-const CRYPTO_WALLETS = {
-  bitcoin:
-    process.env.NEXT_PUBLIC_CRYPTO_WALLET_BITCOIN ||
-    "12fRdYfNvvbAgoRM3bD8rByorieo5ZqD9P",
-  ethereum:
-    process.env.NEXT_PUBLIC_CRYPTO_WALLET_ETHEREUM ||
-    "0xdaB7c9Cb68B0CafB4Bc330Ef2dD4628e7E8ED855",
-  usdt:
-    process.env.NEXT_PUBLIC_CRYPTO_WALLET_USDT ||
-    "0xdaB7c9Cb68B0CafB4Bc330Ef2dD4628e7E8ED855",
-};
+interface DepositAddress {
+  id: string;
+  payment_method: string;
+  label: string;
+  address: string;
+  network: string | null;
+  qr_code_url: string | null;
+  display_order: number;
+  min_deposit: number;
+  max_deposit: number | null;
+  instructions: string | null;
+}
 
 export default function DepositPage() {
   const [amount, setAmount] = useState("");
@@ -46,6 +46,7 @@ export default function DepositPage() {
   const [imagePreview, setImagePreview] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [depositRequests, setDepositRequests] = useState<DepositRequest[]>([]);
+  const [depositAddresses, setDepositAddresses] = useState<DepositAddress[]>([]);
   const [showForm, setShowForm] = useState(true);
   const toast = useToast();
 
@@ -100,14 +101,27 @@ export default function DepositPage() {
     }
   };
 
-  const cryptoOptions = [
-    { value: "bitcoin", label: "Bitcoin (BTC)", icon: "₿" },
-    { value: "ethereum", label: "Ethereum (ETH)", icon: "Ξ" },
-    { value: "usdt", label: "Tether (USDT)", icon: "₮" },
-  ];
+  const fetchDepositAddresses = async () => {
+    try {
+      const response = await fetch('/api/deposit-addresses');
+      if (response.ok) {
+        const data = await response.json();
+        setDepositAddresses(data.addresses);
+        // Set first address as default if available
+        if (data.addresses.length > 0) {
+          setSelectedCrypto(data.addresses[0].payment_method);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching deposit addresses:', error);
+      toast.error('Failed to load deposit addresses');
+    }
+  };
 
   useEffect(() => {
     fetchDepositRequests();
+    fetchDepositAddresses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchDepositRequests = async () => {
@@ -233,40 +247,63 @@ export default function DepositPage() {
                 <input
                   type="number"
                   step="0.01"
-                  min="10"
+                  min={
+                    depositAddresses.find((addr) => addr.payment_method === selectedCrypto)
+                      ?.min_deposit || 10
+                  }
+                  max={
+                    depositAddresses.find((addr) => addr.payment_method === selectedCrypto)
+                      ?.max_deposit || undefined
+                  }
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 form-input"
                   placeholder="Enter amount to deposit"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Minimum deposit: $10.00
-                </p>
+                {(() => {
+                  const selectedAddress = depositAddresses.find(
+                    (addr) => addr.payment_method === selectedCrypto
+                  );
+                  if (selectedAddress) {
+                    return (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Minimum deposit: ${selectedAddress.min_deposit.toFixed(2)}
+                        {selectedAddress.max_deposit &&
+                          ` | Maximum: $${selectedAddress.max_deposit.toFixed(2)}`}
+                      </p>
+                    );
+                  }
+                  return (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Minimum deposit: $10.00
+                    </p>
+                  );
+                })()}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Cryptocurrency
+                  Select Payment Method
                 </label>
                 <div className="grid grid-cols-2 gap-3">
-                  {cryptoOptions.map((crypto) => (
+                  {depositAddresses.map((address) => (
                     <button
-                      key={crypto.value}
+                      key={address.id}
                       type="button"
-                      onClick={() => setSelectedCrypto(crypto.value)}
+                      onClick={() => setSelectedCrypto(address.payment_method)}
                       className={`p-4 border-2 rounded-lg text-left transition-colors ${
-                        selectedCrypto === crypto.value
+                        selectedCrypto === address.payment_method
                           ? "border-green-500 bg-green-50"
                           : "border-gray-200 hover:border-gray-300"
                       }`}
                     >
                       <div className="flex items-center space-x-3">
-                        <span className="text-2xl">{crypto.icon}</span>
                         <div>
-                          <p className="font-medium text-gray-900">
-                            {crypto.label}
-                          </p>
+                          <p className="font-medium text-gray-900">{address.label}</p>
+                          {address.network && (
+                            <p className="text-xs text-gray-500">{address.network}</p>
+                          )}
                         </div>
                       </div>
                     </button>
@@ -274,59 +311,80 @@ export default function DepositPage() {
                 </div>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-medium text-gray-900 mb-3">
-                  Send{" "}
-                  {cryptoOptions.find((c) => c.value === selectedCrypto)?.label}{" "}
-                  to:
-                </h3>
+              {depositAddresses.length > 0 && selectedCrypto && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  {(() => {
+                    const selectedAddress = depositAddresses.find(
+                      (addr) => addr.payment_method === selectedCrypto
+                    );
+                    if (!selectedAddress) return null;
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Wallet Address
-                    </label>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="text"
-                        value={
-                          CRYPTO_WALLETS[
-                            selectedCrypto as keyof typeof CRYPTO_WALLETS
-                          ]
-                        }
-                        readOnly
-                        className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-mono"
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          copyToClipboard(
-                            CRYPTO_WALLETS[
-                              selectedCrypto as keyof typeof CRYPTO_WALLETS
-                            ]
-                          )
-                        }
-                        className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
+                    return (
+                      <>
+                        <h3 className="font-medium text-gray-900 mb-3">
+                          Send {selectedAddress.label} to:
+                        </h3>
 
-                  <div className="flex justify-center">
-                    <div className="bg-white p-4 rounded-lg border">
-                      <QRCode
-                        value={
-                          CRYPTO_WALLETS[
-                            selectedCrypto as keyof typeof CRYPTO_WALLETS
-                          ]
-                        }
-                        size={150}
-                      />
-                    </div>
-                  </div>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              {selectedAddress.network ? `${selectedAddress.network} Address` : 'Address'}
+                            </label>
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="text"
+                                value={selectedAddress.address}
+                                readOnly
+                                className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-mono"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(selectedAddress.address)}
+                                className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                              >
+                                <Copy className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {selectedAddress.instructions && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                              <p className="text-sm text-blue-800">
+                                <strong>Instructions:</strong> {selectedAddress.instructions}
+                              </p>
+                            </div>
+                          )}
+
+                          {selectedAddress.min_deposit > 0 && (
+                            <p className="text-xs text-gray-500">
+                              Minimum deposit: ${selectedAddress.min_deposit.toFixed(2)}
+                              {selectedAddress.max_deposit && ` | Maximum: $${selectedAddress.max_deposit.toFixed(2)}`}
+                            </p>
+                          )}
+
+                          <div className="flex justify-center">
+                            <div className="bg-white p-4 rounded-lg border">
+                              {selectedAddress.qr_code_url ? (
+                                <Image
+                                  src={selectedAddress.qr_code_url}
+                                  alt="QR Code"
+                                  width={150}
+                                  height={150}
+                                />
+                              ) : (
+                                <QRCode
+                                  value={selectedAddress.address}
+                                  size={150}
+                                />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
-              </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
