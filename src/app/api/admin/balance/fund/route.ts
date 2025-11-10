@@ -73,36 +73,76 @@ export async function POST(request: NextRequest) {
 
       // Create transaction record with custom date if provided
       let transaction;
+
+      // Determine transaction type - use 'credit' if available, fallback to 'admin_funding'
+      const transactionType = "credit";
+
       if (customDate) {
         // Create transaction with custom date using raw SQL
-        const transactionResult = await client.query(
-          `INSERT INTO transactions (user_id, type, amount, balance_type, description, status, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
-           RETURNING *`,
-          [
-            userId,
-            "credit",
-            amount,
-            balanceType.replace("_balance", ""),
-            description || `Manual Balance Adjustment by Admin`,
-            "completed",
-            customDate,
-          ]
-        );
-        transaction = transactionResult.rows[0];
+        try {
+          const transactionResult = await client.query(
+            `INSERT INTO transactions (user_id, type, amount, balance_type, description, status, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             RETURNING *`,
+            [
+              userId,
+              transactionType,
+              amount,
+              balanceType.replace("_balance", ""),
+              description || `Manual Balance Adjustment - Credit`,
+              "completed",
+              customDate,
+            ]
+          );
+          transaction = transactionResult.rows[0];
+        } catch (err) {
+          // If 'credit' type fails (constraint error), fallback to 'admin_funding'
+          console.log("Falling back to admin_funding type:", err);
+          const transactionResult = await client.query(
+            `INSERT INTO transactions (user_id, type, amount, balance_type, description, status, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             RETURNING *`,
+            [
+              userId,
+              "admin_funding",
+              amount,
+              balanceType.replace("_balance", ""),
+              description || `Manual Balance Adjustment - Credit`,
+              "completed",
+              customDate,
+            ]
+          );
+          transaction = transactionResult.rows[0];
+        }
       } else {
         // Create transaction with current timestamp
-        transaction = await transactionQueries.createTransaction(
-          {
-            userId,
-            type: "credit",
-            amount,
-            balanceType: balanceType.replace("_balance", ""),
-            description: description || `Manual Balance Adjustment by Admin`,
-            status: "completed",
-          },
-          client
-        );
+        try {
+          transaction = await transactionQueries.createTransaction(
+            {
+              userId,
+              type: transactionType,
+              amount,
+              balanceType: balanceType.replace("_balance", ""),
+              description: description || `Manual Balance Adjustment - Credit`,
+              status: "completed",
+            },
+            client
+          );
+        } catch (err) {
+          // If 'credit' type fails (constraint error), fallback to 'admin_funding'
+          console.log("Falling back to admin_funding type:", err);
+          transaction = await transactionQueries.createTransaction(
+            {
+              userId,
+              type: "admin_funding",
+              amount,
+              balanceType: balanceType.replace("_balance", ""),
+              description: description || `Manual Balance Adjustment - Credit`,
+              status: "completed",
+            },
+            client
+          );
+        }
       }
 
       return { balance: updatedBalance, transaction };
@@ -115,8 +155,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Balance funding error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to fund balance", details: errorMessage },
       { status: 500 }
     );
   }
@@ -195,36 +236,79 @@ export async function PUT(request: NextRequest) {
 
       // Create transaction record with custom date if provided
       let transaction;
+
+      // Determine transaction type - use 'credit'/'debit' if available, fallback to 'admin_funding'
+      const transactionType = operation === "add" ? "credit" : "debit";
+      const fallbackDescription = operation === "add"
+        ? `Manual Balance Adjustment - Credit`
+        : `Manual Balance Adjustment - Debit`;
+
       if (customDate) {
         // Create transaction with custom date using raw SQL
-        const transactionResult = await client.query(
-          `INSERT INTO transactions (user_id, type, amount, balance_type, description, status, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
-           RETURNING *`,
-          [
-            userId,
-            operation === "add" ? "credit" : "debit",
-            amount,
-            balanceType.replace("_balance", ""),
-            description || `Manual Balance Adjustment by Admin`,
-            "completed",
-            customDate,
-          ]
-        );
-        transaction = transactionResult.rows[0];
+        try {
+          const transactionResult = await client.query(
+            `INSERT INTO transactions (user_id, type, amount, balance_type, description, status, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             RETURNING *`,
+            [
+              userId,
+              transactionType,
+              amount,
+              balanceType.replace("_balance", ""),
+              description || fallbackDescription,
+              "completed",
+              customDate,
+            ]
+          );
+          transaction = transactionResult.rows[0];
+        } catch (err) {
+          // If 'credit'/'debit' type fails (constraint error), fallback to 'admin_funding'
+          console.log("Falling back to admin_funding type:", err);
+          const transactionResult = await client.query(
+            `INSERT INTO transactions (user_id, type, amount, balance_type, description, status, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             RETURNING *`,
+            [
+              userId,
+              "admin_funding",
+              amount,
+              balanceType.replace("_balance", ""),
+              description || fallbackDescription,
+              "completed",
+              customDate,
+            ]
+          );
+          transaction = transactionResult.rows[0];
+        }
       } else {
         // Create transaction with current timestamp
-        transaction = await transactionQueries.createTransaction(
-          {
-            userId,
-            type: operation === "add" ? "credit" : "debit",
-            amount,
-            balanceType: balanceType.replace("_balance", ""),
-            description: description || `Manual Balance Adjustment by Admin`,
-            status: "completed",
-          },
-          client
-        );
+        try {
+          transaction = await transactionQueries.createTransaction(
+            {
+              userId,
+              type: transactionType,
+              amount,
+              balanceType: balanceType.replace("_balance", ""),
+              description: description || fallbackDescription,
+              status: "completed",
+            },
+            client
+          );
+        } catch (err) {
+          // If 'credit'/'debit' type fails (constraint error), fallback to 'admin_funding'
+          console.log("Falling back to admin_funding type:", err);
+          transaction = await transactionQueries.createTransaction(
+            {
+              userId,
+              type: "admin_funding",
+              amount,
+              balanceType: balanceType.replace("_balance", ""),
+              description: description || fallbackDescription,
+              status: "completed",
+            },
+            client
+          );
+        }
       }
 
       return { balance: updatedBalance, transaction };
@@ -237,8 +321,9 @@ export async function PUT(request: NextRequest) {
     });
   } catch (error) {
     console.error("Balance adjustment error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to adjust balance", details: errorMessage },
       { status: 500 }
     );
   }
