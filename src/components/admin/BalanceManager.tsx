@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useToast } from "../../hooks/useToast";
+import { Calendar } from "lucide-react";
 
 interface BalanceManagerProps {
   userId: string;
@@ -24,6 +25,8 @@ export default function BalanceManager({
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [operation, setOperation] = useState<"add" | "subtract">("add");
+  const [useCustomDate, setUseCustomDate] = useState(false);
+  const [customDate, setCustomDate] = useState("");
   const toast = useToast();
 
   const balanceTypes = [
@@ -38,6 +41,20 @@ export default function BalanceManager({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate amount
+    const amountValue = parseFloat(amount);
+    if (isNaN(amountValue) || amountValue <= 0) {
+      toast.error("Please enter a valid amount greater than 0");
+      return;
+    }
+
+    // Validate custom date if enabled
+    if (useCustomDate && !customDate) {
+      toast.error("Please select a custom date or disable custom date option");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -53,15 +70,21 @@ export default function BalanceManager({
         body: JSON.stringify({
           userId,
           balanceType: selectedBalance,
-          amount: parseFloat(amount),
+          amount: amountValue,
           description,
           operation,
+          customDate: useCustomDate ? customDate : null,
         }),
       });
 
       if (response.ok) {
+        toast.success(
+          `Successfully ${operation === "add" ? "added" : "deducted"} $${amountValue.toFixed(2)}`
+        );
         setAmount("");
         setDescription("");
+        setCustomDate("");
+        setUseCustomDate(false);
         onBalanceUpdate();
       } else {
         const errorData = await response.json();
@@ -175,6 +198,49 @@ export default function BalanceManager({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input"
             placeholder="Enter description for this transaction"
           />
+        </div>
+
+        {/* Custom Date Option */}
+        <div className="border-t pt-4">
+          <div className="flex items-center mb-3">
+            <input
+              type="checkbox"
+              id="useCustomDate"
+              checked={useCustomDate}
+              onChange={(e) => setUseCustomDate(e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label
+              htmlFor="useCustomDate"
+              className="ml-2 text-sm font-medium text-gray-700 flex items-center"
+            >
+              <Calendar className="w-4 h-4 mr-1" />
+              Use Custom Transaction Date
+            </label>
+          </div>
+
+          {useCustomDate && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+            >
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Transaction Date & Time
+              </label>
+              <input
+                type="datetime-local"
+                value={customDate}
+                onChange={(e) => setCustomDate(e.target.value)}
+                max={new Date().toISOString().slice(0, 16)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input"
+                required={useCustomDate}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Set a custom date for this transaction (useful for backdating)
+              </p>
+            </motion.div>
+          )}
         </div>
 
         <motion.button

@@ -145,7 +145,7 @@ CREATE TABLE hourly_live_trade_profits (
 CREATE TABLE transactions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    type VARCHAR(30) NOT NULL CHECK (type IN ('deposit', 'withdrawal', 'investment', 'profit', 'bonus', 'referral_commission', 'admin_funding', 'live_trade_investment')),
+    type VARCHAR(30) NOT NULL CHECK (type IN ('deposit', 'withdrawal', 'investment', 'profit', 'bonus', 'referral_commission', 'admin_funding', 'live_trade_investment', 'credit', 'debit')),
     amount DECIMAL(15,2) NOT NULL,
     balance_type VARCHAR(20) NOT NULL CHECK (balance_type IN ('total', 'card', 'credit_score')),
     description TEXT,

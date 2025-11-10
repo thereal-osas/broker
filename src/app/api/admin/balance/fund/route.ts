@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { userId, balanceType, amount, description } = body;
+    const { userId, balanceType, amount, description, customDate } = body;
 
     // Validate input
     if (!userId || !balanceType || !amount || amount <= 0) {
@@ -42,27 +42,68 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate custom date if provided
+    if (customDate) {
+      const dateObj = new Date(customDate);
+      if (isNaN(dateObj.getTime())) {
+        return NextResponse.json(
+          { error: "Invalid custom date" },
+          { status: 400 }
+        );
+      }
+      // Prevent future dates
+      if (dateObj > new Date()) {
+        return NextResponse.json(
+          { error: "Custom date cannot be in the future" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Use transaction to ensure data consistency
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const result = await db.transaction(async (_client) => {
+    const result = await db.transaction(async (client) => {
       // Update user balance
       const updatedBalance = await balanceQueries.updateBalance(
         userId,
         balanceType,
         amount,
-        "add"
+        "add",
+        client
       );
 
-      // Create transaction record
-      const transaction = await transactionQueries.createTransaction({
-        userId,
-        type: "admin_funding",
-        amount,
-        balanceType: balanceType.replace("_balance", ""),
-        description:
-          description || `Deposit Alert - ${balanceType.replace("_", " ")}`,
-        status: "completed",
-      });
+      // Create transaction record with custom date if provided
+      let transaction;
+      if (customDate) {
+        // Create transaction with custom date using raw SQL
+        const transactionResult = await client.query(
+          `INSERT INTO transactions (user_id, type, amount, balance_type, description, status, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING *`,
+          [
+            userId,
+            "credit",
+            amount,
+            balanceType.replace("_balance", ""),
+            description || `Manual Balance Adjustment by Admin`,
+            "completed",
+            customDate,
+          ]
+        );
+        transaction = transactionResult.rows[0];
+      } else {
+        // Create transaction with current timestamp
+        transaction = await transactionQueries.createTransaction(
+          {
+            userId,
+            type: "credit",
+            amount,
+            balanceType: balanceType.replace("_balance", ""),
+            description: description || `Manual Balance Adjustment by Admin`,
+            status: "completed",
+          },
+          client
+        );
+      }
 
       return { balance: updatedBalance, transaction };
     });
@@ -99,6 +140,7 @@ export async function PUT(request: NextRequest) {
       amount,
       description,
       operation = "subtract",
+      customDate,
     } = body;
 
     // Validate input
@@ -122,28 +164,68 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Validate custom date if provided
+    if (customDate) {
+      const dateObj = new Date(customDate);
+      if (isNaN(dateObj.getTime())) {
+        return NextResponse.json(
+          { error: "Invalid custom date" },
+          { status: 400 }
+        );
+      }
+      // Prevent future dates
+      if (dateObj > new Date()) {
+        return NextResponse.json(
+          { error: "Custom date cannot be in the future" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Use transaction to ensure data consistency
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const result = await db.transaction(async (_client) => {
+    const result = await db.transaction(async (client) => {
       // Update user balance
       const updatedBalance = await balanceQueries.updateBalance(
         userId,
         balanceType,
         amount,
-        operation
+        operation,
+        client
       );
 
-      // Create transaction record
-      const transaction = await transactionQueries.createTransaction({
-        userId,
-        type: "admin_funding", // Use admin_funding for both add and subtract operations
-        amount,
-        balanceType: balanceType.replace("_balance", ""),
-        description:
-          description ||
-          `${operation === "add" ? "Deposit Alert" : "Debit Alert"} - ${balanceType.replace("_", " ")}`,
-        status: "completed",
-      });
+      // Create transaction record with custom date if provided
+      let transaction;
+      if (customDate) {
+        // Create transaction with custom date using raw SQL
+        const transactionResult = await client.query(
+          `INSERT INTO transactions (user_id, type, amount, balance_type, description, status, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING *`,
+          [
+            userId,
+            operation === "add" ? "credit" : "debit",
+            amount,
+            balanceType.replace("_balance", ""),
+            description || `Manual Balance Adjustment by Admin`,
+            "completed",
+            customDate,
+          ]
+        );
+        transaction = transactionResult.rows[0];
+      } else {
+        // Create transaction with current timestamp
+        transaction = await transactionQueries.createTransaction(
+          {
+            userId,
+            type: operation === "add" ? "credit" : "debit",
+            amount,
+            balanceType: balanceType.replace("_balance", ""),
+            description: description || `Manual Balance Adjustment by Admin`,
+            status: "completed",
+          },
+          client
+        );
+      }
 
       return { balance: updatedBalance, transaction };
     });
