@@ -240,8 +240,8 @@ export async function PUT(request: NextRequest) {
       // Determine transaction type - use 'credit'/'debit' if available, fallback to 'admin_funding'
       const transactionType = operation === "add" ? "credit" : "debit";
       const fallbackDescription = operation === "add"
-        ? `Manual Balance Adjustment - Credit`
-        : `Manual Balance Adjustment - Debit`;
+        ? `Trading Credit`
+        : `Trading Debit`;
 
       if (customDate) {
         // Create transaction with custom date using raw SQL
