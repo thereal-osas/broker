@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../../../../../lib/auth";
+import { authOptions } from "@/lib/auth";
 import {
   balanceQueries,
   transactionQueries,
   db,
-} from "../../../../../../lib/db";
+} from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   try {
