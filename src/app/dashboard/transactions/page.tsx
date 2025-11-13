@@ -51,6 +51,10 @@ export default function TransactionsPage() {
         return "Deposit Alert";
       case "admin_deduction":
         return "Debit Alert";
+      case "credit":
+        return "Credit Alert";
+      case "debit":
+        return "Debit Alert";
       case "referral_commission":
         return "Referral Commission";
       default:
@@ -62,8 +66,11 @@ export default function TransactionsPage() {
     switch (type) {
       case "deposit":
       case "admin_funding":
+      case "credit":
         return <ArrowUpRight className="w-5 h-5 text-green-500" />;
       case "withdrawal":
+      case "admin_deduction":
+      case "debit":
         return <ArrowDownRight className="w-5 h-5 text-red-500" />;
       case "investment":
         return <TrendingUp className="w-5 h-5 text-blue-500" />;
@@ -73,8 +80,6 @@ export default function TransactionsPage() {
         return <Gift className="w-5 h-5 text-orange-500" />;
       case "referral_commission":
         return <Gift className="w-5 h-5 text-purple-500" />;
-      case "admin_deduction":
-        return <ArrowDownRight className="w-5 h-5 text-red-500" />;
       default:
         return <CreditCard className="w-5 h-5 text-gray-500" />;
     }
@@ -84,6 +89,7 @@ export default function TransactionsPage() {
     switch (type) {
       case "deposit":
       case "admin_funding":
+      case "credit":
       case "profit":
       case "bonus":
       case "referral_commission":
@@ -91,6 +97,7 @@ export default function TransactionsPage() {
       case "withdrawal":
       case "investment":
       case "admin_deduction":
+      case "debit":
         return "text-red-600";
       default:
         return "text-gray-600";
@@ -101,6 +108,7 @@ export default function TransactionsPage() {
     switch (type) {
       case "deposit":
       case "admin_funding":
+      case "credit":
       case "profit":
       case "bonus":
       case "referral_commission":
@@ -108,6 +116,7 @@ export default function TransactionsPage() {
       case "withdrawal":
       case "investment":
       case "admin_deduction":
+      case "debit":
         return "-";
       default:
         return "";
