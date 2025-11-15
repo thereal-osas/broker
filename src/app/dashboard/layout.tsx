@@ -89,9 +89,9 @@ export default function DashboardLayout({
         <div className="flex items-center justify-between h-16 px-6 border-b">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">C</span>
+              <span className="text-white font-bold text-sm">B</span>
             </div>
-            <span className="text-xl font-bold text-gray-900">CredCrypto</span>
+            <span className="text-xl font-bold text-gray-900">BCP</span>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -164,7 +164,7 @@ export default function DashboardLayout({
             >
               <Menu className="w-6 h-6" />
             </button>
-            <h1 className="text-lg font-semibold text-gray-900">CredCrypto</h1>
+            <h1 className="text-lg font-semibold text-gray-900">BCP</h1>
             <div className="w-10"></div>
           </div>
         </div>

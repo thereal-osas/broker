@@ -50,7 +50,7 @@ export default function Home() {
     {
       icon: Shield,
       title: "70% Loss Coverage",
-      description: "Trade and invest with confidence. At CredCrypto, we cover 70% of losses, minimizing your risk and ensuring a safer investment experience.",
+      description: "Trade and invest with confidence. At BCP, we cover 70% of losses, minimizing your risk and ensuring a safer investment experience.",
     },
     {
       icon: DollarSign,
@@ -73,9 +73,9 @@ export default function Home() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">C</span>
+              <span className="text-white font-bold text-lg">B</span>
             </div>
-            <span className="text-2xl font-bold text-white">CredCrypto</span>
+            <span className="text-2xl font-bold text-white">BCP</span>
           </div>
 
           <div className="flex items-center space-x-4">
@@ -155,7 +155,7 @@ export default function Home() {
             className="text-center mb-16"
           >
             <h2 className="text-4xl font-bold text-white mb-4">
-              Why Choose CredCrypto?
+              Why Choose BCP?
             </h2>
             <p className="text-xl text-gray-400 max-w-2xl mx-auto">
               Our platform combines cutting-edge technology with proven
@@ -222,16 +222,16 @@ export default function Home() {
         <div className="max-w-7xl mx-auto text-center">
           <div className="flex items-center justify-center space-x-3 mb-4">
             <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold">C</span>
+              <span className="text-white font-bold">B</span>
             </div>
-            <span className="text-xl font-bold text-white">CredCrypto</span>
+            <span className="text-xl font-bold text-white">BCP</span>
           </div>
           <p className="text-gray-400 mb-4">
             Empowering traders worldwide with smart, secure, and profitable
             trading solutions.
           </p>
           <p className="text-gray-500 text-sm">
-            © 2024 CredCrypto. All rights reserved.
+            © 2024 BCP. All rights reserved.
           </p>
         </div>
       </footer>

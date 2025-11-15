@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CredCrypto - Investment Platform",
+  title: "BCP - Investment Platform",
   description: "Fast, Secure & Compliant Crypto Trading Platform",
 };
 

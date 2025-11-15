@@ -78,6 +78,18 @@ export async function POST(request: Request) {
       instructions,
     } = body;
 
+    console.log("Creating deposit address with data:", {
+      payment_method,
+      label,
+      address,
+      network,
+      is_active,
+      display_order,
+      min_deposit,
+      max_deposit,
+      user_id: session.user.id,
+    });
+
     // Validation
     if (!payment_method || !label || !address) {
       return NextResponse.json(
@@ -89,13 +101,33 @@ export async function POST(request: Request) {
     // Validate address format based on payment method
     const validationError = validateAddress(payment_method, address);
     if (validationError) {
+      console.error("Address validation failed:", validationError);
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
     const result = await db.transaction(async (client) => {
-      // Insert new deposit address
-      const insertQuery = `
-        INSERT INTO deposit_addresses (
+      try {
+        // Insert new deposit address
+        const insertQuery = `
+          INSERT INTO deposit_addresses (
+            payment_method,
+            label,
+            address,
+            network,
+            qr_code_url,
+            is_active,
+            display_order,
+            min_deposit,
+            max_deposit,
+            instructions,
+            created_by,
+            updated_by
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          RETURNING *
+        `;
+
+        console.log("Executing insert query with params:", [
           payment_method,
           label,
           address,
@@ -106,47 +138,51 @@ export async function POST(request: Request) {
           min_deposit,
           max_deposit,
           instructions,
-          created_by,
-          updated_by
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-        RETURNING *
-      `;
-
-      const insertResult = await client.query(insertQuery, [
-        payment_method,
-        label,
-        address,
-        network,
-        qr_code_url,
-        is_active,
-        display_order,
-        min_deposit,
-        max_deposit,
-        instructions,
-        session.user.id,
-        session.user.id,
-      ]);
-
-      const newAddress = insertResult.rows[0];
-
-      // Log the creation in audit log
-      await client.query(
-        `INSERT INTO deposit_address_audit_log (
-          deposit_address_id,
-          action,
-          changed_by,
-          new_value
-        ) VALUES ($1, $2, $3, $4)`,
-        [
-          newAddress.id,
-          "created",
           session.user.id,
-          JSON.stringify(newAddress),
-        ]
-      );
+          session.user.id,
+        ]);
 
-      return newAddress;
+        const insertResult = await client.query(insertQuery, [
+          payment_method,
+          label,
+          address,
+          network,
+          qr_code_url,
+          is_active,
+          display_order,
+          min_deposit,
+          max_deposit,
+          instructions,
+          session.user.id,
+          session.user.id,
+        ]);
+
+        const newAddress = insertResult.rows[0];
+        console.log("Deposit address created successfully:", newAddress.id);
+
+        // Log the creation in audit log
+        await client.query(
+          `INSERT INTO deposit_address_audit_log (
+            deposit_address_id,
+            action,
+            changed_by,
+            new_value
+          ) VALUES ($1, $2, $3, $4)`,
+          [
+            newAddress.id,
+            "created",
+            session.user.id,
+            JSON.stringify(newAddress),
+          ]
+        );
+
+        console.log("Audit log entry created successfully");
+
+        return newAddress;
+      } catch (error) {
+        console.error("Error in transaction:", error);
+        throw error;
+      }
     });
 
     return NextResponse.json({
@@ -185,13 +221,19 @@ function validateAddress(
 
   const pattern = validations[paymentMethod.toLowerCase()];
 
+  // Only validate format if there's a pattern for this payment method
   if (pattern && !pattern.test(address)) {
     return `Invalid ${paymentMethod} address format`;
   }
 
-  // Check for minimum length
-  if (address.length < 20) {
+  // Check for minimum length only for cryptocurrency addresses
+  if (pattern && address.length < 20) {
     return "Address is too short";
+  }
+
+  // For non-crypto payment methods (bank_transfer, paypal, other), just check it's not empty
+  if (!address || address.trim().length === 0) {
+    return "Address cannot be empty";
   }
 
   return null;
