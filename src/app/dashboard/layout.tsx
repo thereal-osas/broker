@@ -68,8 +68,8 @@ export default function DashboardLayout({
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-amber-500"></div>
       </div>
     );
   }
@@ -79,23 +79,23 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-900 flex">
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-black shadow-lg transform ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}
       >
-        <div className="flex items-center justify-between h-16 px-6 border-b">
+        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-800">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">B</span>
             </div>
-            <span className="text-xl font-bold text-gray-900">BCP</span>
+            <span className="text-xl font-bold text-white">BCP</span>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500"
+            className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-300"
           >
             <X className="w-5 h-5" />
           </button>
@@ -109,17 +109,18 @@ export default function DashboardLayout({
                 <Link
                   key={item.name}
                   href={item.href}
+                  onClick={() => setSidebarOpen(false)}
                   className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                     isActive
-                      ? "bg-blue-50 text-blue-700 border-r-2 border-blue-700"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      ? "bg-gray-800 text-amber-400 border-r-2 border-amber-500"
+                      : "text-gray-300 hover:bg-gray-800 hover:text-white"
                   }`}
                 >
                   <item.icon
                     className={`mr-3 h-5 w-5 ${
                       isActive
-                        ? "text-blue-500"
-                        : "text-gray-400 group-hover:text-gray-500"
+                        ? "text-amber-500"
+                        : "text-gray-400 group-hover:text-gray-300"
                     }`}
                   />
                   {item.name}
@@ -129,23 +130,23 @@ export default function DashboardLayout({
           </div>
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800 bg-black">
           <div className="flex items-center space-x-3 mb-3">
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-sm font-medium">
+            <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center">
+              <span className="text-black text-sm font-medium">
                 {session.user.firstName?.[0]}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
+              <p className="text-sm font-medium text-white truncate">
                 {session.user.firstName} {session.user.lastName}
               </p>
-              <p className="text-xs text-gray-500 truncate">Investor</p>
+              <p className="text-xs text-gray-400 truncate">Investor</p>
             </div>
           </div>
           <button
             onClick={() => signOut({ callbackUrl: "/auth/signin" })}
-            className="w-full flex items-center px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="w-full flex items-center px-3 py-2 text-sm font-medium text-red-400 hover:bg-gray-800 rounded-lg transition-colors"
           >
             <LogOut className="mr-3 h-4 w-4" />
             Sign Out
@@ -156,15 +157,15 @@ export default function DashboardLayout({
       {/* Main content */}
       <div className="flex-1 lg:ml-0">
         {/* Mobile header */}
-        <div className="lg:hidden bg-white shadow-sm border-b px-4 py-3">
+        <div className="lg:hidden bg-black shadow-sm border-b border-gray-800 px-4 py-3">
           <div className="flex items-center justify-between">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-md text-gray-400 hover:text-gray-500"
+              className="p-2 rounded-md text-gray-400 hover:text-gray-300"
             >
               <Menu className="w-6 h-6" />
             </button>
-            <h1 className="text-lg font-semibold text-gray-900">BCP</h1>
+            <h1 className="text-lg font-semibold text-white">BCP</h1>
             <div className="w-10"></div>
           </div>
         </div>
